@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUi } from '../contexts/UiContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
 import { useProfiles, useUpdateProfileRole } from '../hooks/useProfiles';
 import { supabase } from '../lib/supabase';
 import type { Ruolo } from '../types/database';
+
+const emptyNewUser = { nome: '', email: '', password: '', ruolo: 'allenatore' as Ruolo };
 
 function resizeImageToDataUrl(file: File, maxSize = 200): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -38,10 +41,15 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const { data: profiles = [] } = useProfiles();
   const updateRole = useUpdateProfileRole();
+  const qc = useQueryClient();
 
   const [clubName, setClubName] = useState('');
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+
+  const [newUserFormOpen, setNewUserFormOpen] = useState(false);
+  const [newUser, setNewUser] = useState(emptyNewUser);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     if (settings) setClubName(settings.club_name || '');
@@ -93,10 +101,73 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleCreateUser() {
+    if (!newUser.email.trim() || !newUser.email.includes('@')) {
+      showToast('Inserisci un\'email valida');
+      return;
+    }
+    if (newUser.password.length < 6) {
+      showToast('La password deve avere almeno 6 caratteri');
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      const res = await fetch('/.netlify/functions/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(newUser),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore sconosciuto');
+      await qc.invalidateQueries({ queryKey: ['profiles'] });
+      setNewUser(emptyNewUser);
+      setNewUserFormOpen(false);
+      showToast('Utente creato');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Errore nella creazione dell\'utente');
+    } finally {
+      setCreatingUser(false);
+    }
+  }
+
   return (
     <section>
       <div className="card">
-        <h3>Utenti e ruoli</h3>
+        <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>Utenti e ruoli</h3>
+          <button className="btn small" onClick={() => setNewUserFormOpen((v) => !v)}>
+            {newUserFormOpen ? 'Annulla' : '+ Nuovo utente'}
+          </button>
+        </div>
+
+        {newUserFormOpen && (
+          <div className="card" style={{ background: 'var(--panna)', borderStyle: 'dashed' }}>
+            <div className="row">
+              <div className="field"><label>Nome</label><input value={newUser.nome} onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })} /></div>
+              <div className="field"><label>Email</label><input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} /></div>
+              <div className="field"><label>Password iniziale</label><input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} /></div>
+              <div className="field">
+                <label>Ruolo</label>
+                <select value={newUser.ruolo} onChange={(e) => setNewUser({ ...newUser, ruolo: e.target.value as Ruolo })}>
+                  <option value="allenatore">Allenatore</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            </div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+              Comunica tu stesso email e password al nuovo utente — potrà cambiarla da Impostazioni dopo il primo accesso.
+            </div>
+            <div className="settings-actions">
+              <button className="btn" onClick={handleCreateUser} disabled={creatingUser}>
+                {creatingUser ? 'Creazione…' : 'Crea utente'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {profiles.length === 0 ? (
           <div className="empty">Nessun utente trovato.</div>
         ) : (
@@ -125,8 +196,7 @@ export default function SettingsPage() {
           </div>
         )}
         <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>
-          Nuovi utenti si creano da Supabase Dashboard → Authentication → Add user: nascono come
-          &quot;Allenatore&quot; e li puoi promuovere qui. Non puoi cambiare il tuo stesso ruolo.
+          Non puoi cambiare il tuo stesso ruolo — chiedi a un altro admin se serve.
         </div>
       </div>
 

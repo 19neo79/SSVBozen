@@ -24,14 +24,27 @@ Le variabili d'ambiente richieste (vedi `.env.example`):
 - **allenatore**: Allenamenti, Weekend, Piano settimanale, Statistiche, Rosa (sola lettura).
 - **admin**: tutto quanto sopra più Rosa modificabile, Palestre, Avversari, Impostazioni.
 
-Non esiste un flusso di registrazione pubblico: gli account si creano da **Supabase Dashboard →
-Authentication → Add user**. Ogni nuovo utente riceve automaticamente il ruolo `allenatore`
-(trigger `handle_new_user`); per promuoverlo ad admin, un admin esistente può farlo da un client
-autorizzato oppure via SQL Editor:
+Un admin può creare nuovi utenti direttamente da **Impostazioni → Utenti e ruoli → + Nuovo
+utente** (email, password iniziale, ruolo) e promuovere/retrocedere gli utenti esistenti dalla
+stessa pagina. In alternativa restano disponibili Supabase Dashboard → Authentication → Add user
+(nasce come `allenatore`, va promosso via SQL) o direttamente via SQL Editor:
 
 ```sql
 update profiles set ruolo = 'admin' where id = '<uuid-utente>';
 ```
+
+### Creazione utenti da Impostazioni (Netlify Function)
+
+La creazione utenti dalla UI usa una Netlify Function (`netlify/functions/create-user.mts`) che
+gira lato server con la **service role key** di Supabase — non deve mai finire nel bundle del
+frontend. Richiede una variabile d'ambiente aggiuntiva, solo su Netlify (non in `.env.local`,
+altrimenti Vite la includerebbe nel codice del browser):
+
+- `SUPABASE_SERVICE_ROLE_KEY` — da Supabase Dashboard → Settings → API Keys → "Secret keys" (NON
+  la publishable key). Impostala in **Site settings → Environment variables** su Netlify, senza il
+  prefisso `VITE_`.
+
+La funzione verifica lato server che chi chiama sia un admin autenticato prima di creare l'utente.
 
 ## Pagina pubblica
 
@@ -65,6 +78,9 @@ npm run build   # tsc -b && vite build, output in dist/
 ```
 
 `netlify.toml` è già configurato con il redirect SPA (`/* → /index.html`) necessario per il
-routing lato client. Su Netlify, imposta le due variabili d'ambiente (`VITE_SUPABASE_URL`,
-`VITE_SUPABASE_PUBLISHABLE_KEY`) in **Site settings → Environment variables** prima del primo
-deploy.
+routing lato client. Su Netlify, imposta le variabili d'ambiente in **Site settings → Environment
+variables** prima del primo deploy:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (vedi sopra — necessaria solo per la creazione utenti da UI)
