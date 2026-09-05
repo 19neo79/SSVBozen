@@ -50,6 +50,7 @@ export default function SettingsPage() {
   const [newUserFormOpen, setNewUserFormOpen] = useState(false);
   const [newUser, setNewUser] = useState(emptyNewUser);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (settings) setClubName(settings.club_name || '');
@@ -133,6 +134,32 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleDeleteUser(id: string, nome: string | null, email: string | null) {
+    const ok = await confirm(
+      `Eliminare definitivamente l'utente ${nome || email || 'selezionato'}? Non potrà più accedere all'app. L'azione non è reversibile.`
+    );
+    if (!ok) return;
+    setDeletingUserId(id);
+    try {
+      const res = await fetch('/.netlify/functions/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Errore sconosciuto');
+      await qc.invalidateQueries({ queryKey: ['profiles'] });
+      showToast('Utente eliminato');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Errore nell\'eliminazione dell\'utente');
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
   return (
     <section>
       <div className="card">
@@ -173,24 +200,39 @@ export default function SettingsPage() {
         ) : (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th></th></tr></thead>
               <tbody>
-                {profiles.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.nome || '—'}</td>
-                    <td className="muted">{p.email || '—'}</td>
-                    <td>
-                      <select
-                        value={p.ruolo}
-                        disabled={p.id === session?.user.id}
-                        onChange={(e) => handleRoleChange(p.id, p.nome, e.target.value as Ruolo)}
-                      >
-                        <option value="allenatore">Allenatore</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                {profiles.map((p) => {
+                  const isSelf = p.id === session?.user.id;
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.nome || '—'}</td>
+                      <td className="muted">{p.email || '—'}</td>
+                      <td>
+                        <select
+                          value={p.ruolo}
+                          disabled={isSelf}
+                          onChange={(e) => handleRoleChange(p.id, p.nome, e.target.value as Ruolo)}
+                        >
+                          <option value="allenatore">Allenatore</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                      <td>
+                        {!isSelf && (
+                          <button
+                            className="btn small"
+                            style={{ background: 'var(--rosso-scuro)' }}
+                            disabled={deletingUserId === p.id}
+                            onClick={() => handleDeleteUser(p.id, p.nome, p.email)}
+                          >
+                            {deletingUserId === p.id ? 'Elimina…' : 'Elimina'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

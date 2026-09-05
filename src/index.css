@@ -148,6 +148,45 @@ nav.tabs a.active {
   border-bottom-color: var(--rosso);
 }
 
+.menu-toggle {
+  display: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 12px;
+}
+
+@media (max-width: 900px) {
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .top-actions {
+    width: auto;
+  }
+  nav.tabs {
+    display: none;
+    flex-direction: column;
+    padding: 6px;
+    overflow-x: visible;
+  }
+  nav.tabs.open {
+    display: flex;
+  }
+  nav.tabs a {
+    text-align: left;
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--linea);
+    border-radius: 0;
+  }
+  nav.tabs a:last-child {
+    border-bottom: none;
+  }
+  nav.tabs a.active {
+    background: var(--panna);
+  }
+}
+
 main {
   max-width: 980px;
   margin: 0 auto;
@@ -630,24 +669,6 @@ table.matrix tbody tr:nth-child(even) th {
   .icon-btn {
     flex: 1;
     text-align: center;
-  }
-  nav.tabs {
-    padding: 0 8px;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    justify-content: center;
-    row-gap: 2px;
-  }
-  nav.tabs a {
-    flex: 1 1 30%;
-    text-align: center;
-    padding: 10px 6px 9px;
-    font-size: 13.5px;
-    border-bottom: 2px solid transparent;
-    border-radius: 6px 6px 0 0;
-  }
-  nav.tabs a.active {
-    background: var(--panna);
   }
   main {
     padding: 16px 12px 70px;
