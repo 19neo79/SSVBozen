@@ -1,0 +1,316 @@
+import { useEffect, useState } from 'react';
+import { useUi } from '../contexts/UiContext';
+import { useRoster } from '../hooks/useRoster';
+import { useVenues } from '../hooks/useVenues';
+import {
+  useAddTraining,
+  useAddTrainingsBulk,
+  useDeleteTraining,
+  useTrainings,
+  useUpdateTraining,
+} from '../hooks/useTrainings';
+import { useRecurringDefaults, useSaveRecurringDefaults } from '../hooks/useRecurringDefaults';
+import { TimeRangeInput } from '../components/ui/TimeInputs';
+import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
+import { fmtDate, fmtDateShort, todayISO, weekRangeFor } from '../lib/dates';
+import { resolveLocation } from '../lib/location';
+import type { Giorno, Training } from '../types/database';
+
+const GIORNI: { key: Giorno; label: string; dayIndex: number }[] = [
+  { key: 'lun', label: 'Lunedì', dayIndex: 0 },
+  { key: 'mer', label: 'Mercoledì', dayIndex: 2 },
+  { key: 'ven', label: 'Venerdì', dayIndex: 4 },
+];
+
+interface DayState {
+  attivo: boolean;
+  orario: string;
+  venueSel: string; // venue id, '__custom__', or ''
+  custom: string;
+}
+
+function emptyDay(): DayState {
+  return { attivo: true, orario: '18:00–19:30', venueSel: '', custom: '' };
+}
+
+export default function TrainingsPage() {
+  const { showToast, confirm } = useUi();
+  const { data: roster = [] } = useRoster();
+  const { data: venues = [] } = useVenues();
+  const { data: trainings = [] } = useTrainings();
+  const { data: recurringDefaults } = useRecurringDefaults();
+  const saveDefaults = useSaveRecurringDefaults();
+  const addTraining = useAddTraining();
+  const addBulk = useAddTrainingsBulk();
+  const updateTraining = useUpdateTraining();
+  const deleteTraining = useDeleteTraining();
+
+  const [week, setWeek] = useState(todayISO());
+  const [days, setDays] = useState<Record<Giorno, DayState>>({
+    lun: emptyDay(), mer: emptyDay(), ven: emptyDay(),
+  });
+  const [recurringConvocati, setRecurringConvocati] = useState<string[]>([]);
+
+  const [singleDate, setSingleDate] = useState('');
+  const [singleOrario, setSingleOrario] = useState('18:00–19:30');
+  const [singleVenueSel, setSingleVenueSel] = useState('');
+  const [singleCustom, setSingleCustom] = useState('');
+  const [singleConvocati, setSingleConvocati] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecurringConvocati(roster.map((p) => p.id));
+    setSingleConvocati(roster.map((p) => p.id));
+  }, [roster.length]);
+
+  useEffect(() => {
+    if (!recurringDefaults) return;
+    setDays((prev) => {
+      const next = { ...prev };
+      (Object.keys(next) as Giorno[]).forEach((g) => {
+        const d = recurringDefaults[g];
+        if (d) {
+          next[g] = {
+            ...next[g],
+            orario: d.orario || next[g].orario,
+            venueSel: d.venue_id || (d.palestra_custom ? '__custom__' : ''),
+            custom: d.palestra_custom || '',
+          };
+        }
+      });
+      return next;
+    });
+  }, [recurringDefaults]);
+
+  const weekDays = weekRangeFor(week);
+  const dayMap: Record<Giorno, string> = { lun: weekDays[0], mer: weekDays[2], ven: weekDays[4] };
+
+  function setDay(g: Giorno, patch: Partial<DayState>) {
+    setDays((prev) => ({ ...prev, [g]: { ...prev[g], ...patch } }));
+  }
+
+  async function handleGenerate() {
+    if (!week) { showToast('Scegli la settimana'); return; }
+    const existing = new Set(trainings.map((t) => `${t.data}|${t.orario}|${t.venue_id || ''}|${(t.palestra_custom || '').toLowerCase()}`));
+    const rows: Partial<Training>[] = [];
+    const newDefaults: { giorno: Giorno; orario: string | null; venue_id: string | null; palestra_custom: string | null }[] = [];
+    let skipped = 0, incomplete = 0;
+
+    for (const { key } of GIORNI) {
+      const d = days[key];
+      if (!d.attivo) continue;
+      const venue_id = d.venueSel && d.venueSel !== '__custom__' ? d.venueSel : null;
+      const palestra_custom = d.venueSel === '__custom__' ? d.custom.trim() : null;
+      if (!d.orario || (!venue_id && !palestra_custom)) { incomplete++; continue; }
+      const dataStr = dayMap[key];
+      const k = `${dataStr}|${d.orario}|${venue_id || ''}|${(palestra_custom || '').toLowerCase()}`;
+      if (existing.has(k)) { skipped++; }
+      else {
+        rows.push({ data: dataStr, orario: d.orario, venue_id, palestra_custom, convocati: recurringConvocati, presenze: [] });
+        existing.add(k);
+      }
+      newDefaults.push({ giorno: key, orario: d.orario, venue_id, palestra_custom });
+    }
+
+    if (rows.length === 0 && skipped === 0) {
+      showToast(incomplete > 0 ? 'Compila orario e palestra per almeno un giorno' : 'Nessun allenamento da generare');
+      return;
+    }
+
+    try {
+      if (rows.length) await addBulk.mutateAsync(rows);
+      if (newDefaults.length) await saveDefaults.mutateAsync(newDefaults);
+      let msg = `${rows.length} allenamenti generati`;
+      if (skipped) msg += ` (${skipped} già esistenti, saltati)`;
+      if (incomplete) msg += ` — ${incomplete} giorno/i incompleto/i ignorato/i`;
+      showToast(msg);
+    } catch {
+      showToast('Errore nella generazione degli allenamenti');
+    }
+  }
+
+  async function handleAddSingle() {
+    const venue_id = singleVenueSel && singleVenueSel !== '__custom__' ? singleVenueSel : null;
+    const palestra_custom = singleVenueSel === '__custom__' ? singleCustom.trim() : null;
+    if (!singleDate || !singleOrario || (!venue_id && !palestra_custom)) {
+      showToast('Compila data, orario e palestra');
+      return;
+    }
+    try {
+      await addTraining.mutateAsync({ data: singleDate, orario: singleOrario, venue_id, palestra_custom, convocati: singleConvocati, presenze: [] });
+      setSingleOrario('18:00–19:30');
+      setSingleVenueSel('');
+      setSingleCustom('');
+      showToast('Allenamento aggiunto');
+    } catch {
+      showToast('Errore nel salvataggio');
+    }
+  }
+
+  async function togglePresenza(t: Training, playerId: string, checked: boolean) {
+    const presenze = checked ? [...(t.presenze || []), playerId] : (t.presenze || []).filter((id) => id !== playerId);
+    try {
+      await updateTraining.mutateAsync({ id: t.id, data: { presenze } });
+    } catch {
+      showToast('Errore nel salvataggio della presenza');
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const ok = await confirm('Eliminare questo allenamento?');
+    if (!ok) return;
+    try {
+      await deleteTraining.mutateAsync(id);
+      showToast('Allenamento eliminato');
+    } catch {
+      showToast('Errore nella cancellazione');
+    }
+  }
+
+  const sortedTrainings = [...trainings].sort((a, b) => a.data.localeCompare(b.data));
+  const playerLabel = (id: string) => {
+    const p = roster.find((x) => x.id === id);
+    return p ? `${p.cognome} ${p.nome}` : '?';
+  };
+
+  return (
+    <section>
+      <div className="card">
+          <h3>Genera allenamenti della settimana</h3>
+          <div className="row" style={{ marginBottom: 6 }}>
+            <div className="field">
+              <label>Settimana di</label>
+              <input type="date" value={week} onChange={(e) => setWeek(e.target.value)} />
+            </div>
+            <div className="week-range" style={{ alignSelf: 'center' }}>
+              {fmtDateShort(weekDays[0])} — {fmtDateShort(weekDays[6])}
+            </div>
+          </div>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+            Genera sempre lunedì, mercoledì e venerdì della settimana scelta. Deseleziona un giorno per saltarlo (es. festivo).
+          </div>
+
+          {GIORNI.map(({ key, label }) => {
+            const d = days[key];
+            return (
+              <div className="card" style={{ background: 'var(--panna)', borderStyle: 'dashed', marginTop: 10 }} key={key}>
+                <div className="row">
+                  <label className="chk" style={{ background: '#fff' }}>
+                    <input type="checkbox" checked={d.attivo} onChange={(e) => setDay(key, { attivo: e.target.checked })} />
+                    <b>{label}</b>
+                  </label>
+                  <div className="field">
+                    <label>Orario</label>
+                    <TimeRangeInput value={d.orario} onChange={(v) => setDay(key, { orario: v })} />
+                  </div>
+                  <div className="field">
+                    <label>Palestra</label>
+                    <select style={{ width: 200 }} value={d.venueSel} onChange={(e) => setDay(key, { venueSel: e.target.value })} disabled={!d.attivo}>
+                      <option value="">— scegli palestra —</option>
+                      {venues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                      <option value="__custom__">Altro (inserisci manualmente)</option>
+                    </select>
+                  </div>
+                  {d.venueSel === '__custom__' && (
+                    <div className="field">
+                      <label>Nome palestra</label>
+                      <input style={{ width: 180 }} value={d.custom} onChange={(e) => setDay(key, { custom: e.target.value })} disabled={!d.attivo} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="field" style={{ marginTop: 12 }}>
+            <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+              <label style={{ margin: 0 }}>Convocati</label>
+              <SelectAllButton players={roster} selected={recurringConvocati} onChange={setRecurringConvocati} />
+            </div>
+            <PlayerChecks players={roster} selected={recurringConvocati} onChange={setRecurringConvocati} />
+          </div>
+          <div className="settings-actions">
+            <button className="btn" onClick={handleGenerate}>Genera allenamenti di questa settimana</button>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3>Nuova sessione di allenamento</h3>
+          <div className="row">
+            <div className="field"><label>Data</label><input type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} /></div>
+            <div className="field">
+              <label>Orario</label>
+              <TimeRangeInput value={singleOrario} onChange={setSingleOrario} />
+            </div>
+            <div className="field">
+              <label>Palestra</label>
+              <select style={{ width: 200 }} value={singleVenueSel} onChange={(e) => setSingleVenueSel(e.target.value)}>
+                <option value="">— scegli palestra —</option>
+                {venues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                <option value="__custom__">Altro (inserisci manualmente)</option>
+              </select>
+            </div>
+            {singleVenueSel === '__custom__' && (
+              <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={singleCustom} onChange={(e) => setSingleCustom(e.target.value)} /></div>
+            )}
+          </div>
+          <div className="field" style={{ marginTop: 12 }}>
+            <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+              <label style={{ margin: 0 }}>Convocati</label>
+              <SelectAllButton players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+            </div>
+            <PlayerChecks players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+          </div>
+          <div className="settings-actions">
+            <button className="btn" onClick={handleAddSingle}>Aggiungi allenamento</button>
+          </div>
+        </div>
+
+      <div className="event-list">
+        {sortedTrainings.length === 0 ? (
+          <div className="empty">Nessun allenamento inserito.</div>
+        ) : (
+          sortedTrainings.map((t) => {
+            const presenze = t.presenze || [];
+            const convocati = t.convocati || [];
+            const convocatiPlayers = convocati
+              .map((id) => roster.find((p) => p.id === id))
+              .filter((p): p is NonNullable<typeof p> => !!p)
+              .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+            const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
+            return (
+              <div className="event" key={t.id}>
+                <div className="event-main">
+                  <div className="event-date">{fmtDate(t.data)}</div>
+                  <div className="event-detail">
+                    {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                  </div>
+                  <div className="event-conv">Convocati: {convocati.length} — {convocati.map(playerLabel).join(', ') || 'nessuno'}</div>
+                  <div className="event-conv">Presenti: {presenze.length} / {convocati.length}</div>
+                  {convocatiPlayers.length === 0 ? (
+                    <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+                  ) : (
+                    <div className="checks">
+                      {convocatiPlayers.map((p) => (
+                        <label className="chk" key={p.id}>
+                          <input
+                            type="checkbox"
+                            checked={presenze.includes(p.id)}
+                            onChange={(e) => togglePresenza(t, p.id, e.target.checked)}
+                          />
+                          {p.numero ?? ''} {p.cognome} {p.nome}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="event-actions">
+                  <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(t.id)}>Elimina</button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </section>
+  );
+}
