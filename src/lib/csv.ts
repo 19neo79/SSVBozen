@@ -1,3 +1,21 @@
+/**
+ * Legge un file CSV gestendo codifiche diverse da UTF-8. Excel/Numbers su alcune
+ * configurazioni esportano CSV in Windows-1252/Latin-1: decodificando quei byte
+ * come UTF-8 le lettere accentate (es. "à" in "papà") diventano caratteri
+ * corrotti e le intestazioni non vengono più riconosciute. Se la decodifica
+ * UTF-8 produce caratteri non validi, si riprova con Windows-1252.
+ */
+export async function readCsvFile(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+  if (!utf8.includes('�')) return utf8;
+  try {
+    return new TextDecoder('windows-1252', { fatal: false }).decode(buffer);
+  } catch {
+    return utf8;
+  }
+}
+
 export function normalizeHeader(h: string): string {
   return (h || '')
     .toString()

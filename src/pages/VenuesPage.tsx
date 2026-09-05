@@ -4,7 +4,7 @@ import { useDeleteVenue, useSaveVenue, useUpsertManyVenues, useVenues } from '..
 import { useAvversari } from '../hooks/useAvversari';
 import type { Venue } from '../types/database';
 import { mapsUrlForVenue } from '../lib/location';
-import { detectDelimiter, normalizeHeader, parseCSVLine, downloadCSV } from '../lib/csv';
+import { detectDelimiter, normalizeHeader, parseCSVLine, downloadCSV, readCsvFile } from '../lib/csv';
 
 const VENUE_HEADER_MAP: Record<string, string> = {
   nome: 'nome', nomepalestra: 'nome',
@@ -97,7 +97,7 @@ export default function VenuesPage() {
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await readCsvFile(file);
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 2) { showToast('Il file CSV sembra vuoto'); e.target.value = ''; return; }
     const delim = detectDelimiter(lines[0]);

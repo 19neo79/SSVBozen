@@ -10,6 +10,7 @@ import {
   detectDelimiter,
   normalizeHeader,
   parseCSVLine,
+  readCsvFile,
 } from '../lib/csv';
 
 const RUOLI = ['Palleggiatore', 'Opposto', 'Schiacciatore', 'Centrale', 'Libero', 'Universale'];
@@ -158,7 +159,7 @@ export default function RosterPage() {
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await readCsvFile(file);
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 2) { showToast('Il file CSV sembra vuoto'); e.target.value = ''; return; }
     const delim = detectDelimiter(lines[0]);
