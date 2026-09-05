@@ -1,8 +1,23 @@
 import type { Context } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL as string;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+
+// Chiamate dirette alle API REST/Auth di Supabase invece del client @supabase/supabase-js:
+// il client completo inizializza anche il canale Realtime (WebSocket), che sull'runtime
+// Node delle Netlify Functions manca del WebSocket nativo e fa crashare la funzione.
+async function supabaseFetch(path: string, init: RequestInit) {
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    ...init,
+    headers: {
+      apikey: SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...init.headers,
+    },
+  });
+  return res;
+}
 
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
@@ -14,26 +29,24 @@ export default async (req: Request, _context: Context) => {
   }
 
   const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  if (!token) {
+  const callerToken = authHeader.replace(/^Bearer\s+/i, '');
+  if (!callerToken) {
     return new Response(JSON.stringify({ error: 'Non autenticato' }), { status: 401 });
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
+  const callerRes = await supabaseFetch('/auth/v1/user', {
+    headers: { Authorization: `Bearer ${callerToken}` },
   });
-
-  const { data: callerData, error: callerError } = await admin.auth.getUser(token);
-  if (callerError || !callerData?.user) {
+  if (!callerRes.ok) {
     return new Response(JSON.stringify({ error: 'Sessione non valida' }), { status: 401 });
   }
+  const caller = (await callerRes.json()) as { id: string };
 
-  const { data: callerProfile, error: profileError } = await admin
-    .from('profiles')
-    .select('ruolo')
-    .eq('id', callerData.user.id)
-    .single();
-  if (profileError || callerProfile?.ruolo !== 'admin') {
+  const profileRes = await supabaseFetch(`/rest/v1/profiles?id=eq.${caller.id}&select=ruolo`, {
+    method: 'GET',
+  });
+  const profileRows = (await profileRes.json()) as { ruolo?: string }[];
+  if (!profileRes.ok || profileRows[0]?.ruolo !== 'admin') {
     return new Response(JSON.stringify({ error: 'Solo un admin può creare nuovi utenti' }), { status: 403 });
   }
 
@@ -56,21 +69,29 @@ export default async (req: Request, _context: Context) => {
     return new Response(JSON.stringify({ error: 'La password deve avere almeno 6 caratteri' }), { status: 400 });
   }
 
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: nome ? { nome } : undefined,
+  const createRes = await supabaseFetch('/auth/v1/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: nome ? { nome } : undefined,
+    }),
   });
-  if (createError || !created?.user) {
-    return new Response(JSON.stringify({ error: createError?.message || 'Creazione utente fallita' }), { status: 400 });
+  const created = (await createRes.json()) as { id?: string; msg?: string; error_description?: string; message?: string };
+  if (!createRes.ok || !created.id) {
+    const message = created.msg || created.error_description || created.message || 'Creazione utente fallita';
+    return new Response(JSON.stringify({ error: message }), { status: 400 });
   }
 
   if (ruolo === 'admin') {
-    await admin.from('profiles').update({ ruolo: 'admin' }).eq('id', created.user.id);
+    await supabaseFetch(`/rest/v1/profiles?id=eq.${created.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ruolo: 'admin' }),
+    });
   }
 
-  return new Response(JSON.stringify({ id: created.user.id, email, ruolo }), {
+  return new Response(JSON.stringify({ id: created.id, email, ruolo }), {
     status: 200,
     headers: { 'content-type': 'application/json' },
   });
