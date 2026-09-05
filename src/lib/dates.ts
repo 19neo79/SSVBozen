@@ -14,17 +14,22 @@ export function fmtISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function fmtDate(iso: string): string {
-  if (!iso) return '';
-  const d = parseDateLocal(iso);
-  const s = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
+/** Data completa in formato GG/MM/AAAA. */
 export function fmtDateShort(iso: string): string {
   if (!iso) return '';
   const d = parseDateLocal(iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${d.getFullYear()}`;
+}
+
+/** Giorno della settimana + data completa, es. "Lunedì 07/09/2026". */
+export function fmtDate(iso: string): string {
+  if (!iso) return '';
+  const d = parseDateLocal(iso);
+  const weekday = d.toLocaleDateString('it-IT', { weekday: 'long' });
+  const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${capitalized} ${fmtDateShort(iso)}`;
 }
 
 export function dayLabelShort(iso: string): string {
