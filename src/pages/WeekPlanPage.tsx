@@ -1,25 +1,22 @@
 import { useState } from 'react';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
-import { useAvversari } from '../hooks/useAvversari';
 import { useTrainings } from '../hooks/useTrainings';
 import { useMatches } from '../hooks/useMatches';
 import { useSettings } from '../hooks/useSettings';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
 import { fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
-import type { Locatable } from '../lib/location';
 
 export default function WeekPlanPage() {
   const [pianoData, setPianoData] = useState(todayISO());
   const { data: roster = [] } = useRoster();
   const { data: venues = [] } = useVenues();
-  const { data: avversari = [] } = useAvversari();
   const { data: trainings = [] } = useTrainings();
   const { data: matches = [] } = useMatches();
   const { data: settings } = useSettings();
 
   const days = weekRangeFor(pianoData);
-  const locatables: Locatable[] = [...venues, ...avversari.flatMap((o) => o.campi || [])];
+  const locatables = venues;
   const isCurrentWeek = days.includes(todayISO());
 
   function handlePrint() {

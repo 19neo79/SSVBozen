@@ -14,7 +14,7 @@ import { TimeSingleInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
 import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine } from '../lib/csv';
-import { resolveLocation, type Locatable } from '../lib/location';
+import { resolveLocation } from '../lib/location';
 import type { CasaTrasferta, Categoria, Match } from '../types/database';
 
 const MATCH_HEADER_MAP: Record<string, string> = {
@@ -58,12 +58,8 @@ export default function MatchesPage() {
 
   const opponent = avversari.find((o) => o.id === avvSel) || null;
   const filteredOpponents = avversari.filter((o) => o.categoria === categoria).sort((a, b) => a.nome.localeCompare(b.nome));
-  const usaCampoAvversario = casaTrasferta === 'Trasferta' && !!opponent && (opponent.campi || []).length > 0;
-
-  const allLocatables: Locatable[] = [
-    ...venues,
-    ...avversari.flatMap((o) => o.campi || []),
-  ];
+  const opponentVenues = opponent ? venues.filter((v) => v.avversario_id === opponent.id) : [];
+  const usaCampoAvversario = casaTrasferta === 'Trasferta' && opponentVenues.length > 0;
 
   async function handleAdd() {
     let avversarioNome: string;
@@ -139,7 +135,7 @@ export default function MatchesPage() {
     const headers = ['Data', 'Orario', 'Casa/Trasferta', 'Categoria', 'Avversario', 'Palestra/Luogo'];
     const rows = matches.map((m) => [
       isoToItalian(m.data), m.orario || '', m.casa_trasferta || '', m.categoria || '', m.avversario || '',
-      resolveLocation(m.venue_id, m.luogo_custom, allLocatables).label,
+      resolveLocation(m.venue_id, m.luogo_custom, venues).label,
     ]);
     downloadCSV('calendario_partite_export.csv', headers, rows);
   }
@@ -252,20 +248,20 @@ export default function MatchesPage() {
           <div className="field" style={{ flex: 1, minWidth: 200 }}>
             <label>{usaCampoAvversario ? 'Campo avversario' : 'Luogo / Palestra'}</label>
             {usaCampoAvversario ? (
-              (opponent && opponent.campi.length === 1) ? (
-                <select style={{ width: '100%' }} value={opponent.campi[0].id} disabled>
-                  <option value={opponent.campi[0].id}>{opponent.campi[0].nome}</option>
+              opponentVenues.length === 1 ? (
+                <select style={{ width: '100%' }} value={opponentVenues[0].id} disabled>
+                  <option value={opponentVenues[0].id}>{opponentVenues[0].nome}</option>
                 </select>
               ) : (
                 <select style={{ width: '100%' }} value={venueSel} onChange={(e) => setVenueSel(e.target.value)}>
                   <option value="">— scegli campo —</option>
-                  {opponent?.campi.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  {opponentVenues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
                 </select>
               )
             ) : (
               <select style={{ width: '100%' }} value={venueSel} onChange={(e) => setVenueSel(e.target.value)}>
                 <option value="">— scegli palestra —</option>
-                {venues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                {venues.filter((v) => !v.avversario_id).map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
                 <option value="__custom__">Altro (inserisci manualmente)</option>
               </select>
             )}
@@ -301,7 +297,7 @@ export default function MatchesPage() {
               .map((id) => roster.find((p) => p.id === id))
               .filter((p): p is NonNullable<typeof p> => !!p)
               .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
-            const loc = resolveLocation(m.venue_id, m.luogo_custom, allLocatables);
+            const loc = resolveLocation(m.venue_id, m.luogo_custom, venues);
             return (
               <div className="event match" key={m.id}>
                 <div className="event-main">

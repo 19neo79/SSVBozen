@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
 import { todayISO, weekRangeFor, fmtDateShort, parseDateLocal, fmtISODate } from '../lib/dates';
-import type { Locatable } from '../lib/location';
 import type {
-  PublicCampoBasic,
   PublicMatch,
   PublicRosterBasic,
   PublicSettingsBasic,
@@ -15,7 +13,6 @@ import type {
 interface PublicData {
   roster: PublicRosterBasic[];
   venues: PublicVenueBasic[];
-  campi: PublicCampoBasic[];
   trainings: PublicTraining[];
   matches: PublicMatch[];
   clubName: string;
@@ -30,16 +27,15 @@ export default function PublicProgramPage() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [rosterRes, venuesRes, campiRes, trainingsRes, matchesRes, settingsRes] = await Promise.all([
+      const [rosterRes, venuesRes, trainingsRes, matchesRes, settingsRes] = await Promise.all([
         supabase.from('public_roster_basic').select('*'),
         supabase.from('public_venues_basic').select('*'),
-        supabase.from('public_campi_avversari_basic').select('*'),
         supabase.from('public_trainings').select('*'),
         supabase.from('public_matches').select('*'),
         supabase.from('public_settings_basic').select('*').maybeSingle(),
       ]);
       if (!mounted) return;
-      if (rosterRes.error || venuesRes.error || campiRes.error || trainingsRes.error || matchesRes.error) {
+      if (rosterRes.error || venuesRes.error || trainingsRes.error || matchesRes.error) {
         setError(true);
         return;
       }
@@ -47,7 +43,6 @@ export default function PublicProgramPage() {
       setData({
         roster: (rosterRes.data || []) as PublicRosterBasic[],
         venues: (venuesRes.data || []) as PublicVenueBasic[],
-        campi: (campiRes.data || []) as PublicCampoBasic[],
         trainings: (trainingsRes.data || []) as PublicTraining[],
         matches: (matchesRes.data || []) as PublicMatch[],
         clubName: settingsRow?.club_name || 'SSV Bozen Volley',
@@ -73,7 +68,6 @@ export default function PublicProgramPage() {
   }
 
   const days = weekRangeFor(weekAnchor);
-  const locatables: Locatable[] = [...data.venues, ...data.campi];
   const isCurrentWeek = days.includes(todayISO());
 
   function shiftWeek(deltaDays: number) {
@@ -125,7 +119,7 @@ export default function PublicProgramPage() {
               matches={data.matches}
               roster={data.roster}
               settings={{ club_name: data.clubName, logo_url: data.logoUrl }}
-              locatables={locatables}
+              locatables={data.venues}
             />
           </div>
         </div>

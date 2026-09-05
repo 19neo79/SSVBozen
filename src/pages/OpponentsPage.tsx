@@ -1,35 +1,36 @@
 import { useState } from 'react';
 import { useUi } from '../contexts/UiContext';
-import {
-  useAvversari,
-  useDeleteAvversario,
-  useDeleteCampo,
-  useSaveAvversario,
-  useSaveCampo,
-} from '../hooks/useAvversari';
-import type { AvversarioConCampi, CampoAvversario, Categoria } from '../types/database';
+import { useAvversari, useDeleteAvversario, useSaveAvversario } from '../hooks/useAvversari';
+import { useDeleteVenue, useSaveVenue, useVenues } from '../hooks/useVenues';
+import { mapsUrlForVenue } from '../lib/location';
+import type { Avversario, Categoria, Venue } from '../types/database';
 
 const emptyOpponentForm = { nome: '', categoria: 'U14' as Categoria };
-const emptyCampoForm = { nome: '', indirizzo: '', cap: '', citta: '', provincia: '' };
+const emptyVenueForm = { nome: '', indirizzo: '', cap: '', citta: '', provincia: '' };
 
 export default function OpponentsPage() {
   const { showToast, confirm } = useUi();
   const { data: avversari = [] } = useAvversari();
+  const { data: venues = [] } = useVenues();
   const saveAvversario = useSaveAvversario();
   const deleteAvversario = useDeleteAvversario();
-  const saveCampo = useSaveCampo();
-  const deleteCampo = useDeleteCampo();
+  const saveVenue = useSaveVenue();
+  const deleteVenue = useDeleteVenue();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyOpponentForm);
 
-  const [campiManagerFor, setCampiManagerFor] = useState<string | null>(null);
-  const [editingCampoId, setEditingCampoId] = useState<string | null>(null);
-  const [campoForm, setCampoForm] = useState(emptyCampoForm);
+  const [managingFor, setManagingFor] = useState<string | null>(null);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
+  const [venueForm, setVenueForm] = useState(emptyVenueForm);
 
-  function openForm(o?: AvversarioConCampi) {
-    setCampiManagerFor(null);
+  function opponentVenues(opponentId: string): Venue[] {
+    return venues.filter((v) => v.avversario_id === opponentId);
+  }
+
+  function openForm(o?: Avversario) {
+    setManagingFor(null);
     if (o) {
       setEditingId(o.id);
       setForm({ nome: o.nome, categoria: o.categoria });
@@ -57,7 +58,7 @@ export default function OpponentsPage() {
   }
 
   async function handleDelete(id: string) {
-    const ok = await confirm('Eliminare questo avversario e tutti i suoi campi da gioco? Le partite che lo usano mostreranno solo il nome salvato.');
+    const ok = await confirm('Eliminare questo avversario e tutte le sue palestre? Le partite che lo usano mostreranno solo il nome salvato.');
     if (!ok) return;
     try {
       await deleteAvversario.mutateAsync(id);
@@ -67,50 +68,51 @@ export default function OpponentsPage() {
     }
   }
 
-  function manageCampi(opponentId: string) {
+  function manageVenues(opponentId: string) {
     setFormOpen(false);
-    setCampiManagerFor(opponentId);
-    setEditingCampoId(null);
-    setCampoForm(emptyCampoForm);
+    setManagingFor(opponentId);
+    setEditingVenueId(null);
+    setVenueForm(emptyVenueForm);
   }
 
-  function closeCampiManager() {
-    setCampiManagerFor(null);
-    setEditingCampoId(null);
+  function closeVenueManager() {
+    setManagingFor(null);
+    setEditingVenueId(null);
   }
 
-  function editCampo(c: CampoAvversario) {
-    setEditingCampoId(c.id);
-    setCampoForm({ nome: c.nome, indirizzo: c.indirizzo || '', cap: c.cap || '', citta: c.citta || '', provincia: c.provincia || '' });
+  function editVenue(v: Venue) {
+    setEditingVenueId(v.id);
+    setVenueForm({ nome: v.nome, indirizzo: v.indirizzo || '', cap: v.cap || '', citta: v.citta || '', provincia: v.provincia || '' });
   }
 
-  async function handleSaveCampo() {
-    if (!campiManagerFor) return;
-    if (!campoForm.nome.trim()) { showToast('Inserisci il nome del campo'); return; }
+  async function handleSaveVenue() {
+    if (!managingFor) return;
+    if (!venueForm.nome.trim()) { showToast('Inserisci il nome della palestra'); return; }
     const data = {
-      nome: campoForm.nome.trim(),
-      indirizzo: campoForm.indirizzo.trim() || null,
-      cap: campoForm.cap.trim() || null,
-      citta: campoForm.citta.trim() || null,
-      provincia: campoForm.provincia.trim() || null,
+      nome: venueForm.nome.trim(),
+      indirizzo: venueForm.indirizzo.trim() || null,
+      cap: venueForm.cap.trim() || null,
+      citta: venueForm.citta.trim() || null,
+      provincia: venueForm.provincia.trim().toUpperCase() || null,
+      avversario_id: managingFor,
     };
     try {
-      await saveCampo.mutateAsync({ id: editingCampoId, avversario_id: campiManagerFor, data });
-      setEditingCampoId(null);
-      setCampoForm(emptyCampoForm);
-      showToast('Campo salvato');
+      await saveVenue.mutateAsync({ id: editingVenueId, data });
+      setEditingVenueId(null);
+      setVenueForm(emptyVenueForm);
+      showToast('Palestra salvata');
     } catch {
-      showToast('Errore nel salvataggio del campo');
+      showToast('Errore nel salvataggio della palestra');
     }
   }
 
-  async function handleDeleteCampo(id: string) {
-    const ok = await confirm('Eliminare questo campo da gioco?');
+  async function handleDeleteVenue(id: string) {
+    const ok = await confirm('Eliminare questa palestra?');
     if (!ok) return;
     try {
-      await deleteCampo.mutateAsync(id);
-      if (editingCampoId === id) { setEditingCampoId(null); setCampoForm(emptyCampoForm); }
-      showToast('Campo eliminato');
+      await deleteVenue.mutateAsync(id);
+      if (editingVenueId === id) { setEditingVenueId(null); setVenueForm(emptyVenueForm); }
+      showToast('Palestra eliminata');
     } catch {
       showToast('Errore nella cancellazione');
     }
@@ -119,7 +121,8 @@ export default function OpponentsPage() {
   const sorted = [...avversari].sort((a, b) =>
     a.categoria === b.categoria ? a.nome.localeCompare(b.nome) : a.categoria.localeCompare(b.categoria)
   );
-  const managing = avversari.find((o) => o.id === campiManagerFor);
+  const managing = avversari.find((o) => o.id === managingFor);
+  const managingVenuesList = managingFor ? opponentVenues(managingFor) : [];
 
   return (
     <section>
@@ -152,37 +155,38 @@ export default function OpponentsPage() {
 
       {managing && (
         <div className="card">
-          <h3>Campi da gioco — {managing.nome}</h3>
-          {(managing.campi || []).length === 0 ? (
-            <div className="empty">Nessun campo inserito per questo avversario.</div>
+          <h3>Palestre — {managing.nome}</h3>
+          {managingVenuesList.length === 0 ? (
+            <div className="empty">Nessuna palestra inserita per questo avversario.</div>
           ) : (
             <div className="event-list">
-              {managing.campi.map((c) => (
-                <div className="event" key={c.id}>
+              {managingVenuesList.map((v) => (
+                <div className="event" key={v.id}>
                   <div className="event-main">
-                    <div className="event-date">{c.nome}</div>
+                    <div className="event-date">{v.nome}</div>
                     <div className="event-detail">
-                      {[c.indirizzo, c.cap, c.citta, c.provincia].filter(Boolean).join(', ') || <span className="muted">nessun indirizzo</span>}
+                      {[v.indirizzo, v.cap, v.citta, v.provincia].filter(Boolean).join(', ') || <span className="muted">nessun indirizzo</span>}
                     </div>
                   </div>
                   <div className="event-actions">
-                    <button className="btn ghost small" onClick={() => editCampo(c)}>Modifica</button>
-                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDeleteCampo(c.id)}>Elimina</button>
+                    <a className="btn ghost small" href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer">Apri in Maps</a>
+                    <button className="btn ghost small" onClick={() => editVenue(v)}>Modifica</button>
+                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDeleteVenue(v.id)}>Elimina</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
           <div className="row" style={{ marginTop: 12, flexWrap: 'wrap' }}>
-            <div className="field"><label>Nome campo</label><input style={{ width: 160 }} value={campoForm.nome} onChange={(e) => setCampoForm({ ...campoForm, nome: e.target.value })} /></div>
-            <div className="field"><label>Indirizzo</label><input style={{ width: 180 }} value={campoForm.indirizzo} onChange={(e) => setCampoForm({ ...campoForm, indirizzo: e.target.value })} /></div>
-            <div className="field"><label>CAP</label><input style={{ width: 80 }} value={campoForm.cap} onChange={(e) => setCampoForm({ ...campoForm, cap: e.target.value })} /></div>
-            <div className="field"><label>Città</label><input style={{ width: 140 }} value={campoForm.citta} onChange={(e) => setCampoForm({ ...campoForm, citta: e.target.value })} /></div>
-            <div className="field"><label>Provincia</label><input style={{ width: 80 }} value={campoForm.provincia} onChange={(e) => setCampoForm({ ...campoForm, provincia: e.target.value })} /></div>
+            <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={venueForm.nome} onChange={(e) => setVenueForm({ ...venueForm, nome: e.target.value })} /></div>
+            <div className="field"><label>Indirizzo</label><input style={{ width: 200 }} value={venueForm.indirizzo} onChange={(e) => setVenueForm({ ...venueForm, indirizzo: e.target.value })} /></div>
+            <div className="field"><label>CAP</label><input style={{ width: 90 }} value={venueForm.cap} onChange={(e) => setVenueForm({ ...venueForm, cap: e.target.value })} /></div>
+            <div className="field"><label>Città</label><input style={{ width: 150 }} value={venueForm.citta} onChange={(e) => setVenueForm({ ...venueForm, citta: e.target.value })} /></div>
+            <div className="field"><label>Provincia</label><input style={{ width: 80 }} maxLength={2} value={venueForm.provincia} onChange={(e) => setVenueForm({ ...venueForm, provincia: e.target.value })} /></div>
           </div>
           <div className="settings-actions">
-            <button className="btn ghost" onClick={closeCampiManager}>Chiudi</button>
-            <button className="btn" onClick={handleSaveCampo}>{editingCampoId ? 'Aggiorna campo' : '+ Aggiungi campo'}</button>
+            <button className="btn ghost" onClick={closeVenueManager}>Chiudi</button>
+            <button className="btn" onClick={handleSaveVenue}>{editingVenueId ? 'Aggiorna palestra' : '+ Aggiungi palestra'}</button>
           </div>
         </div>
       )}
@@ -192,22 +196,25 @@ export default function OpponentsPage() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Nome</th><th>Categoria</th><th>Campi da gioco</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Categoria</th><th>Palestre</th><th></th></tr></thead>
             <tbody>
-              {sorted.map((o) => (
-                <tr key={o.id}>
-                  <td>{o.nome}</td>
-                  <td style={{ textAlign: 'center' }}>{o.categoria}</td>
-                  <td>{(o.campi || []).length === 0 ? <span className="muted">nessuno inserito</span> : o.campi.map((c) => c.nome).join(', ')}</td>
-                  <td>
-                    <div className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                      <button className="btn ghost small" onClick={() => manageCampi(o.id)}>Campi</button>
-                      <button className="btn ghost small" onClick={() => openForm(o)}>Modifica</button>
-                      <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(o.id)}>Elimina</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {sorted.map((o) => {
+                const ownVenues = opponentVenues(o.id);
+                return (
+                  <tr key={o.id}>
+                    <td>{o.nome}</td>
+                    <td style={{ textAlign: 'center' }}>{o.categoria}</td>
+                    <td>{ownVenues.length === 0 ? <span className="muted">nessuna inserita</span> : ownVenues.map((v) => v.nome).join(', ')}</td>
+                    <td>
+                      <div className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                        <button className="btn ghost small" onClick={() => manageVenues(o.id)}>Palestre</button>
+                        <button className="btn ghost small" onClick={() => openForm(o)}>Modifica</button>
+                        <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(o.id)}>Elimina</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

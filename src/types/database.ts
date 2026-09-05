@@ -18,6 +18,7 @@ export interface Venue {
   cap: string | null;
   citta: string | null;
   provincia: string | null;
+  avversario_id: string | null;
   created_at: string;
 }
 
@@ -26,20 +27,6 @@ export interface Avversario {
   nome: string;
   categoria: Categoria;
   created_at: string;
-}
-
-export interface CampoAvversario {
-  id: string;
-  avversario_id: string;
-  nome: string;
-  indirizzo: string | null;
-  cap: string | null;
-  citta: string | null;
-  provincia: string | null;
-}
-
-export interface AvversarioConCampi extends Avversario {
-  campi: CampoAvversario[];
 }
 
 export interface RosterPlayer {
@@ -114,16 +101,6 @@ export interface PublicRosterBasic {
 
 export interface PublicVenueBasic {
   id: string;
-  nome: string;
-  indirizzo: string | null;
-  cap: string | null;
-  citta: string | null;
-  provincia: string | null;
-}
-
-export interface PublicCampoBasic {
-  id: string;
-  avversario_id: string;
   nome: string;
   indirizzo: string | null;
   cap: string | null;

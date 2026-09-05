@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useDeleteVenue, useSaveVenue, useUpsertManyVenues, useVenues } from '../hooks/useVenues';
+import { useAvversari } from '../hooks/useAvversari';
 import type { Venue } from '../types/database';
 import { mapsUrlForVenue } from '../lib/location';
 import { detectDelimiter, normalizeHeader, parseCSVLine, downloadCSV } from '../lib/csv';
@@ -18,6 +19,7 @@ const emptyForm = { nome: '', indirizzo: '', cap: '', citta: '', provincia: '' }
 export default function VenuesPage() {
   const { showToast, confirm } = useUi();
   const { data: venues = [] } = useVenues();
+  const { data: avversari = [] } = useAvversari();
   const saveVenue = useSaveVenue();
   const deleteVenue = useDeleteVenue();
   const upsertMany = useUpsertManyVenues();
@@ -85,9 +87,10 @@ export default function VenuesPage() {
   }
 
   function exportCSV() {
-    if (venues.length === 0) { showToast('Nessuna palestra da esportare'); return; }
+    const ownVenues = venues.filter((v) => !v.avversario_id);
+    if (ownVenues.length === 0) { showToast('Nessuna palestra da esportare'); return; }
     const headers = ['Nome palestra', 'Indirizzo', 'CAP', 'Città', 'Provincia'];
-    const rows = venues.map((v) => [v.nome || '', v.indirizzo || '', v.cap || '', v.citta || '', v.provincia || '']);
+    const rows = ownVenues.map((v) => [v.nome || '', v.indirizzo || '', v.cap || '', v.citta || '', v.provincia || '']);
     downloadCSV('palestre_export.csv', headers, rows);
   }
 
@@ -113,7 +116,7 @@ export default function VenuesPage() {
         nome: rec.nome, indirizzo: rec.indirizzo || null, cap: rec.cap || null,
         citta: rec.citta || null, provincia: (rec.provincia || '').toUpperCase() || null,
       };
-      const existing = venues.find((v) => v.nome.trim().toLowerCase() === rec.nome.trim().toLowerCase());
+      const existing = venues.find((v) => !v.avversario_id && v.nome.trim().toLowerCase() === rec.nome.trim().toLowerCase());
       if (existing) { rows.push({ id: existing.id, ...data }); updated++; }
       else { rows.push(data); added++; }
     }
@@ -127,7 +130,14 @@ export default function VenuesPage() {
     e.target.value = '';
   }
 
-  const sorted = [...venues].sort((a, b) => a.nome.localeCompare(b.nome));
+  const avversarioNome = (id: string | null) => (id ? avversari.find((o) => o.id === id)?.nome || null : null);
+  const sorted = [...venues].sort((a, b) => {
+    if (!a.avversario_id !== !b.avversario_id) return a.avversario_id ? 1 : -1;
+    const an = avversarioNome(a.avversario_id) || '';
+    const bn = avversarioNome(b.avversario_id) || '';
+    if (an !== bn) return an.localeCompare(bn);
+    return a.nome.localeCompare(b.nome);
+  });
 
   return (
     <section>
@@ -167,13 +177,14 @@ export default function VenuesPage() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th></th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th>Avversario</th><th></th><th></th></tr></thead>
             <tbody>
               {sorted.map((v) => (
                 <tr key={v.id}>
                   <td>{v.nome}</td>
                   <td className="muted">{v.indirizzo || '—'}</td>
                   <td className="muted">{[v.cap, v.citta, v.provincia].filter(Boolean).join(' ') || '—'}</td>
+                  <td className="muted">{avversarioNome(v.avversario_id) || '—'}</td>
                   <td><a href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer" className="btn ghost small">Apri in Maps</a></td>
                   <td>
                     <button className="btn ghost small" onClick={() => openForm(v)}>Modifica</button>{' '}
