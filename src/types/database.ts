@@ -6,6 +6,7 @@ export type Giorno = 'lun' | 'mer' | 'ven';
 export interface Profile {
   id: string;
   nome: string | null;
+  email: string | null;
   ruolo: Ruolo;
   created_at: string;
 }
@@ -98,6 +99,11 @@ export interface RecurringDefault {
 }
 
 // ---------- public (unauthenticated) views ----------
+
+export interface PublicSettingsBasic {
+  club_name: string;
+  logo_url: string | null;
+}
 
 export interface PublicRosterBasic {
   id: string;

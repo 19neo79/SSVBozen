@@ -7,6 +7,7 @@ import type {
   PublicCampoBasic,
   PublicMatch,
   PublicRosterBasic,
+  PublicSettingsBasic,
   PublicTraining,
   PublicVenueBasic,
 } from '../types/database';
@@ -29,26 +30,28 @@ export default function PublicProgramPage() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [rosterRes, venuesRes, campiRes, trainingsRes, matchesRes] = await Promise.all([
+      const [rosterRes, venuesRes, campiRes, trainingsRes, matchesRes, settingsRes] = await Promise.all([
         supabase.from('public_roster_basic').select('*'),
         supabase.from('public_venues_basic').select('*'),
         supabase.from('public_campi_avversari_basic').select('*'),
         supabase.from('public_trainings').select('*'),
         supabase.from('public_matches').select('*'),
+        supabase.from('public_settings_basic').select('*').maybeSingle(),
       ]);
       if (!mounted) return;
       if (rosterRes.error || venuesRes.error || campiRes.error || trainingsRes.error || matchesRes.error) {
         setError(true);
         return;
       }
+      const settingsRow = settingsRes.data as PublicSettingsBasic | null;
       setData({
         roster: (rosterRes.data || []) as PublicRosterBasic[],
         venues: (venuesRes.data || []) as PublicVenueBasic[],
         campi: (campiRes.data || []) as PublicCampoBasic[],
         trainings: (trainingsRes.data || []) as PublicTraining[],
         matches: (matchesRes.data || []) as PublicMatch[],
-        clubName: 'SSV Bozen Volley',
-        logoUrl: null,
+        clubName: settingsRow?.club_name || 'SSV Bozen Volley',
+        logoUrl: settingsRow?.logo_url || null,
       });
     }
     load();
@@ -87,7 +90,13 @@ export default function PublicProgramPage() {
       </div>
       <header className="top">
         <div className="club">
-          <div className="logo-fallback">SB</div>
+          {data.logoUrl ? (
+            <img src={data.logoUrl} alt={data.clubName} />
+          ) : (
+            <div className="logo-fallback">
+              {data.clubName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
             <div className="club-name">{data.clubName}</div>
             <div className="club-sub">Programma della settimana — Under 14/15</div>

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
+import { useProfiles, useUpdateProfileRole } from '../hooks/useProfiles';
 import { supabase } from '../lib/supabase';
+import type { Ruolo } from '../types/database';
 
 function resizeImageToDataUrl(file: File, maxSize = 200): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,9 +32,12 @@ function resizeImageToDataUrl(file: File, maxSize = 200): Promise<string> {
 }
 
 export default function SettingsPage() {
-  const { showToast } = useUi();
+  const { showToast, confirm } = useUi();
+  const { session } = useAuth();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
+  const { data: profiles = [] } = useProfiles();
+  const updateRole = useUpdateProfileRole();
 
   const [clubName, setClubName] = useState('');
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
@@ -74,8 +80,56 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleRoleChange(id: string, nome: string | null, ruolo: Ruolo) {
+    const ok = await confirm(
+      `Cambiare il ruolo di ${nome || 'questo utente'} in "${ruolo === 'admin' ? 'Admin' : 'Allenatore'}"?`
+    );
+    if (!ok) return;
+    try {
+      await updateRole.mutateAsync({ id, ruolo });
+      showToast('Ruolo aggiornato');
+    } catch {
+      showToast('Errore nell\'aggiornamento del ruolo');
+    }
+  }
+
   return (
     <section>
+      <div className="card">
+        <h3>Utenti e ruoli</h3>
+        {profiles.length === 0 ? (
+          <div className="empty">Nessun utente trovato.</div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th></tr></thead>
+              <tbody>
+                {profiles.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.nome || '—'}</td>
+                    <td className="muted">{p.email || '—'}</td>
+                    <td>
+                      <select
+                        value={p.ruolo}
+                        disabled={p.id === session?.user.id}
+                        onChange={(e) => handleRoleChange(p.id, p.nome, e.target.value as Ruolo)}
+                      >
+                        <option value="allenatore">Allenatore</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+          Nuovi utenti si creano da Supabase Dashboard → Authentication → Add user: nascono come
+          &quot;Allenatore&quot; e li puoi promuovere qui. Non puoi cambiare il tuo stesso ruolo.
+        </div>
+      </div>
+
       <div className="card">
         <h3>Impostazioni società</h3>
         <div className="field" style={{ marginBottom: 14 }}>
