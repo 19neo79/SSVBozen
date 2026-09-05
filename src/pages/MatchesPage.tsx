@@ -55,6 +55,8 @@ export default function MatchesPage() {
   const [venueSel, setVenueSel] = useState('');
   const [venueCustom, setVenueCustom] = useState('');
   const [convocati, setConvocati] = useState<string[]>(roster.map((p) => p.id));
+  const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
+  const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
 
   const opponent = avversari.find((o) => o.id === avvSel) || null;
   const filteredOpponents = avversari.filter((o) => o.categoria === categoria).sort((a, b) => a.nome.localeCompare(b.nome));
@@ -115,6 +117,27 @@ export default function MatchesPage() {
       showToast('Partita eliminata');
     } catch {
       showToast('Errore nella cancellazione');
+    }
+  }
+
+  function openEditConvocati(m: Match) {
+    setEditingConvocatiId(m.id);
+    setEditingConvocatiSelection(m.convocati || []);
+  }
+
+  function closeEditConvocati() {
+    setEditingConvocatiId(null);
+    setEditingConvocatiSelection([]);
+  }
+
+  async function saveEditConvocati(m: Match) {
+    const presenze = (m.presenze || []).filter((id) => editingConvocatiSelection.includes(id));
+    try {
+      await updateMatch.mutateAsync({ id: m.id, data: { convocati: editingConvocatiSelection, presenze } });
+      closeEditConvocati();
+      showToast('Convocati aggiornati');
+    } catch {
+      showToast('Errore nel salvataggio dei convocati');
     }
   }
 
@@ -298,6 +321,7 @@ export default function MatchesPage() {
               .filter((p): p is NonNullable<typeof p> => !!p)
               .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
             const loc = resolveLocation(m.venue_id, m.luogo_custom, venues);
+            const isEditingConvocati = editingConvocatiId === m.id;
             return (
               <div className="event match" key={m.id}>
                 <div className="event-main">
@@ -306,28 +330,47 @@ export default function MatchesPage() {
                     {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
                     {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
                   </div>
-                  <div className="event-conv">Convocati: {(m.convocati || []).length} — {(m.convocati || []).map(playerLabel).join(', ') || 'nessuno'}</div>
-                  <div className="event-conv">Presenti: {presenze.length} / {(m.convocati || []).length}</div>
-                  {convocatiPlayers.length === 0 ? (
-                    <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
-                  ) : (
-                    <div className="checks">
-                      {convocatiPlayers.map((p) => (
-                        <label className="chk" key={p.id}>
-                          <input
-                            type="checkbox"
-                            checked={presenze.includes(p.id)}
-                            onChange={(e) => togglePresenza(m, p.id, e.target.checked)}
-                          />
-                          {p.numero ?? ''} {p.cognome} {p.nome}
-                        </label>
-                      ))}
+                  {isEditingConvocati ? (
+                    <div className="field" style={{ marginTop: 10 }}>
+                      <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+                        <label style={{ margin: 0 }}>Convocati</label>
+                        <SelectAllButton players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                      </div>
+                      <PlayerChecks players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                      <div className="settings-actions">
+                        <button className="btn ghost" onClick={closeEditConvocati}>Annulla</button>
+                        <button className="btn" onClick={() => saveEditConvocati(m)}>Salva convocati</button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="event-conv">Convocati: {(m.convocati || []).length} — {(m.convocati || []).map(playerLabel).join(', ') || 'nessuno'}</div>
+                      <div className="event-conv">Presenti: {presenze.length} / {(m.convocati || []).length}</div>
+                      {convocatiPlayers.length === 0 ? (
+                        <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+                      ) : (
+                        <div className="checks">
+                          {convocatiPlayers.map((p) => (
+                            <label className="chk" key={p.id}>
+                              <input
+                                type="checkbox"
+                                checked={presenze.includes(p.id)}
+                                onChange={(e) => togglePresenza(m, p.id, e.target.checked)}
+                              />
+                              {p.numero ?? ''} {p.cognome} {p.nome}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-                <div className="event-actions">
-                  <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>
-                </div>
+                {!isEditingConvocati && (
+                  <div className="event-actions">
+                    <button className="btn ghost small" onClick={() => openEditConvocati(m)}>Modifica convocati</button>
+                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>
+                  </div>
+                )}
               </div>
             );
           })
