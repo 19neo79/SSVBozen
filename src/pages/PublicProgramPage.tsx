@@ -44,7 +44,7 @@ export default function PublicProgramPage() {
     let mounted = true;
     async function load() {
       const [rosterRes, venuesRes, trainingsRes, matchesRes, settingsRes] = await Promise.all([
-        supabase.from('public_roster_basic').select('*'),
+        supabase.from('public_roster_basic').select('*').order('cognome'),
         supabase.from('public_venues_basic').select('*'),
         supabase.from('public_trainings').select('*'),
         supabase.from('public_matches').select('*'),

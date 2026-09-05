@@ -48,7 +48,7 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
   const weekMatches = matches
     .filter((m) => days.includes(m.data))
     .sort((a, b) => (a.data === b.data ? a.orario.localeCompare(b.orario) : a.data.localeCompare(b.data)));
-  const players = [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+  const players = [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
 
   type Ev = { type: 'training'; item: FoglioTraining } | { type: 'match'; item: FoglioMatch };
   const events: Ev[] = [
