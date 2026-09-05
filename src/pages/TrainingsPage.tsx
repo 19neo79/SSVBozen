@@ -27,10 +27,11 @@ interface DayState {
   orario: string;
   venueSel: string; // venue id, '__custom__', or ''
   custom: string;
+  convocati: string[];
 }
 
 function emptyDay(): DayState {
-  return { attivo: true, orario: '18:00–19:30', venueSel: '', custom: '' };
+  return { attivo: true, orario: '18:00–19:30', venueSel: '', custom: '', convocati: [] };
 }
 
 export default function TrainingsPage() {
@@ -49,8 +50,6 @@ export default function TrainingsPage() {
   const [days, setDays] = useState<Record<Giorno, DayState>>({
     lun: emptyDay(), mer: emptyDay(), ven: emptyDay(),
   });
-  const [recurringConvocati, setRecurringConvocati] = useState<string[]>([]);
-
   const [singleDate, setSingleDate] = useState('');
   const [singleOrario, setSingleOrario] = useState('18:00–19:30');
   const [singleVenueSel, setSingleVenueSel] = useState('');
@@ -58,8 +57,13 @@ export default function TrainingsPage() {
   const [singleConvocati, setSingleConvocati] = useState<string[]>([]);
 
   useEffect(() => {
-    setRecurringConvocati(roster.map((p) => p.id));
-    setSingleConvocati(roster.map((p) => p.id));
+    const allIds = roster.map((p) => p.id);
+    setDays((prev) => ({
+      lun: { ...prev.lun, convocati: allIds },
+      mer: { ...prev.mer, convocati: allIds },
+      ven: { ...prev.ven, convocati: allIds },
+    }));
+    setSingleConvocati(allIds);
   }, [roster.length]);
 
   useEffect(() => {
@@ -105,7 +109,7 @@ export default function TrainingsPage() {
       const k = `${dataStr}|${d.orario}|${venue_id || ''}|${(palestra_custom || '').toLowerCase()}`;
       if (existing.has(k)) { skipped++; }
       else {
-        rows.push({ data: dataStr, orario: d.orario, venue_id, palestra_custom, convocati: recurringConvocati, presenze: [] });
+        rows.push({ data: dataStr, orario: d.orario, venue_id, palestra_custom, convocati: d.convocati, presenze: [] });
         existing.add(k);
       }
       newDefaults.push({ giorno: key, orario: d.orario, venue_id, palestra_custom });
@@ -217,17 +221,17 @@ export default function TrainingsPage() {
                     </div>
                   )}
                 </div>
+                <div className="field" style={{ marginTop: 10 }}>
+                  <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+                    <label style={{ margin: 0 }}>Convocati</label>
+                    <SelectAllButton players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                  </div>
+                  <PlayerChecks players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                </div>
               </div>
             );
           })}
 
-          <div className="field" style={{ marginTop: 12 }}>
-            <div className="row" style={{ alignItems: 'center', gap: 10 }}>
-              <label style={{ margin: 0 }}>Convocati</label>
-              <SelectAllButton players={roster} selected={recurringConvocati} onChange={setRecurringConvocati} />
-            </div>
-            <PlayerChecks players={roster} selected={recurringConvocati} onChange={setRecurringConvocati} />
-          </div>
           <div className="settings-actions">
             <button className="btn" onClick={handleGenerate}>Genera allenamenti di questa settimana</button>
           </div>
