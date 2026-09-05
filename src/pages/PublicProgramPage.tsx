@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
 import { todayISO, weekRangeFor, fmtDateShort, parseDateLocal, fmtISODate } from '../lib/dates';
@@ -19,10 +20,25 @@ interface PublicData {
   logoUrl: string | null;
 }
 
+function weekFromSearchParams(params: URLSearchParams): string {
+  const w = params.get('settimana');
+  return w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayISO();
+}
+
 export default function PublicProgramPage() {
   const [data, setData] = useState<PublicData | null>(null);
   const [error, setError] = useState(false);
-  const [weekAnchor, setWeekAnchor] = useState(todayISO());
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [weekAnchor, setWeekAnchorState] = useState(() => weekFromSearchParams(searchParams));
+
+  function setWeekAnchor(next: string) {
+    setWeekAnchorState(next);
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('settimana', next);
+      return p;
+    }, { replace: true });
+  }
 
   useEffect(() => {
     let mounted = true;
