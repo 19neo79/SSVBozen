@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
-import { todayISO, weekRangeFor, fmtDateShort } from '../lib/dates';
+import { todayISO, weekRangeFor, fmtDateShort, parseDateLocal, fmtISODate } from '../lib/dates';
 import type { Locatable } from '../lib/location';
 import type {
   PublicCampoBasic,
@@ -24,6 +24,7 @@ interface PublicData {
 export default function PublicProgramPage() {
   const [data, setData] = useState<PublicData | null>(null);
   const [error, setError] = useState(false);
+  const [weekAnchor, setWeekAnchor] = useState(todayISO());
 
   useEffect(() => {
     let mounted = true;
@@ -68,8 +69,15 @@ export default function PublicProgramPage() {
     return <div className="center-page">Caricamento…</div>;
   }
 
-  const days = weekRangeFor(todayISO());
+  const days = weekRangeFor(weekAnchor);
   const locatables: Locatable[] = [...data.venues, ...data.campi];
+  const isCurrentWeek = days.includes(todayISO());
+
+  function shiftWeek(deltaDays: number) {
+    const d = parseDateLocal(weekAnchor);
+    d.setDate(d.getDate() + deltaDays);
+    setWeekAnchor(fmtISODate(d));
+  }
 
   return (
     <div style={{ background: 'var(--panna)', minHeight: '100vh' }}>
@@ -87,8 +95,18 @@ export default function PublicProgramPage() {
         </div>
       </header>
       <main>
+        <div className="week-picker no-print">
+          <button className="btn ghost small" onClick={() => shiftWeek(-7)}>← Settimana precedente</button>
+          <div className="week-range">{fmtDateShort(days[0])} — {fmtDateShort(days[6])}</div>
+          <button className="btn ghost small" onClick={() => shiftWeek(7)}>Settimana successiva →</button>
+          {!isCurrentWeek && (
+            <button className="btn small" style={{ marginLeft: 'auto' }} onClick={() => setWeekAnchor(todayISO())}>
+              Torna a questa settimana
+            </button>
+          )}
+        </div>
         <div className="card no-print" style={{ fontSize: 13, color: 'var(--inchiostro-soft)' }}>
-          Settimana dal {fmtDateShort(days[0])} al {fmtDateShort(days[6])}. Questa pagina è pubblica: condividila pure nel gruppo WhatsApp dei genitori.
+          Questa pagina è pubblica: condividila pure nel gruppo WhatsApp dei genitori.
         </div>
         <div className="piano-preview">
           <div className="card">
