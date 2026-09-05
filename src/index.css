@@ -316,6 +316,80 @@ tr:last-child td {
   background: #fff;
 }
 
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  color: var(--inchiostro);
+  cursor: pointer;
+  text-align: left;
+}
+.roster-row:hover {
+  border-color: var(--blu);
+}
+.roster-row-name {
+  flex: 1;
+  font-weight: 600;
+}
+.roster-row-cert {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.roster-row-chevron {
+  color: var(--inchiostro-soft);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.detail-list {
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--linea);
+}
+.detail-list > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.detail-list dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--inchiostro-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.detail-list dd {
+  margin: 0;
+  font-size: 16px;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .card {
   background: #fff;
   border: 1px solid var(--linea);
@@ -710,6 +784,13 @@ table.matrix tbody tr:nth-child(even) th {
     flex-direction: column-reverse;
   }
   .settings-actions .btn {
+    width: 100%;
+  }
+
+  .detail-actions {
+    flex-direction: column;
+  }
+  .detail-actions .btn {
     width: 100%;
   }
 

@@ -35,12 +35,13 @@ const emptyForm = {
   telefono_atleta: '', nome_papa: '', telefono_papa: '', nome_mamma: '', telefono_mamma: '', certificato: '',
 };
 
-function contactLines(p: RosterPlayer): string {
-  const parts: string[] = [];
-  if (p.telefono_atleta) parts.push(`Atleta: ${p.telefono_atleta}`);
-  if (p.telefono_papa) parts.push(`Papà${p.nome_papa ? ' ' + p.nome_papa : ''}: ${p.telefono_papa}`);
-  if (p.telefono_mamma) parts.push(`Mamma${p.nome_mamma ? ' ' + p.nome_mamma : ''}: ${p.telefono_mamma}`);
-  return parts.length ? parts.join(' · ') : '—';
+function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean } {
+  if (!p.certificato) return { label: '—', warn: false };
+  const label = fmtDateShort(p.certificato);
+  const cd = new Date(p.certificato + 'T00:00:00');
+  if (cd < today) return { label: `Scaduto — ${label}`, warn: true };
+  if (cd < soon) return { label: `In scadenza — ${label}`, warn: true };
+  return { label, warn: false };
 }
 
 export default function RosterPage() {
@@ -55,6 +56,7 @@ export default function RosterPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   function openForm(p?: RosterPlayer) {
     if (p) {
@@ -110,10 +112,24 @@ export default function RosterPage() {
     if (!ok) return;
     try {
       await deletePlayer.mutateAsync(id);
+      if (viewingId === id) setViewingId(null);
       showToast('Giocatore eliminato');
     } catch {
       showToast('Errore nella cancellazione');
     }
+  }
+
+  function openDetail(id: string) {
+    setViewingId(id);
+  }
+
+  function closeDetail() {
+    setViewingId(null);
+  }
+
+  function editFromDetail(p: RosterPlayer) {
+    setViewingId(null);
+    openForm(p);
   }
 
   function downloadTemplate() {
@@ -198,10 +214,11 @@ export default function RosterPage() {
     e.target.value = '';
   }
 
-  const players = [...roster].sort((a, b) => (a.codice_fiscale || '').localeCompare(b.codice_fiscale || ''));
+  const players = [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
   const today = new Date();
   const soon = new Date();
   soon.setDate(soon.getDate() + 30);
+  const viewingPlayer = players.find((p) => p.id === viewingId) || null;
 
   return (
     <section>
@@ -262,42 +279,54 @@ export default function RosterPage() {
       {players.length === 0 ? (
         <div className="empty">Nessun giocatore in rosa.</div>
       ) : (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th><th>Nome</th><th>Codice Fiscale</th><th>Ruolo</th><th>Nato/a</th><th>Certificato</th><th>Contatto</th>{isAdmin && <th></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => {
-                let certClass = '';
-                let certLabel = p.certificato ? fmtDateShort(p.certificato) : '—';
-                if (p.certificato) {
-                  const cd = new Date(p.certificato + 'T00:00:00');
-                  if (cd < today) { certClass = 'cert-warn'; certLabel = 'SCADUTO — ' + certLabel; }
-                  else if (cd < soon) { certClass = 'cert-warn'; certLabel = 'in scadenza — ' + certLabel; }
-                }
-                return (
-                  <tr key={p.id}>
-                    <td><span className="num-badge">{p.numero ?? '–'}</span></td>
-                    <td>{p.cognome} {p.nome}</td>
-                    <td className="muted">{p.codice_fiscale || '—'}</td>
-                    <td className="muted">{p.ruolo || '—'}</td>
-                    <td className="muted">{p.data_nascita ? fmtDateShort(p.data_nascita) : '—'}</td>
-                    <td className={certClass}>{certLabel}</td>
-                    <td className="muted">{contactLines(p)}</td>
-                    {isAdmin && (
-                      <td>
-                        <button className="btn ghost small" onClick={() => openForm(p)}>Modifica</button>{' '}
-                        <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(p.id)}>Elimina</button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="roster-list">
+          {players.map((p) => {
+            const cert = certStatus(p, today, soon);
+            return (
+              <button className="roster-row" key={p.id} onClick={() => openDetail(p.id)}>
+                <span className="num-badge">{p.numero ?? '–'}</span>
+                <span className="roster-row-name">{p.cognome} {p.nome}</span>
+                {cert.warn && <span className="cert-warn roster-row-cert">{cert.label}</span>}
+                <span className="roster-row-chevron">›</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {viewingPlayer && (
+        <div className="settings-modal open" onClick={closeDetail}>
+          <div className="settings-box" onClick={(e) => e.stopPropagation()}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <h3 style={{ margin: 0 }}>
+                <span className="num-badge" style={{ marginRight: 8 }}>{viewingPlayer.numero ?? '–'}</span>
+                {viewingPlayer.cognome} {viewingPlayer.nome}
+              </h3>
+            </div>
+            <dl className="detail-list">
+              <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
+              <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
+              <div><dt>Codice fiscale</dt><dd>{viewingPlayer.codice_fiscale || '—'}</dd></div>
+              <div>
+                <dt>Certificato medico</dt>
+                <dd className={certStatus(viewingPlayer, today, soon).warn ? 'cert-warn' : ''}>
+                  {certStatus(viewingPlayer, today, soon).label}
+                </dd>
+              </div>
+              <div><dt>Cellulare atleta</dt><dd>{viewingPlayer.telefono_atleta || '—'}</dd></div>
+              <div><dt>Papà</dt><dd>{viewingPlayer.nome_papa || viewingPlayer.telefono_papa ? `${viewingPlayer.nome_papa || ''}${viewingPlayer.nome_papa && viewingPlayer.telefono_papa ? ' · ' : ''}${viewingPlayer.telefono_papa || ''}` : '—'}</dd></div>
+              <div><dt>Mamma</dt><dd>{viewingPlayer.nome_mamma || viewingPlayer.telefono_mamma ? `${viewingPlayer.nome_mamma || ''}${viewingPlayer.nome_mamma && viewingPlayer.telefono_mamma ? ' · ' : ''}${viewingPlayer.telefono_mamma || ''}` : '—'}</dd></div>
+            </dl>
+            <div className="detail-actions">
+              <button className="btn ghost" onClick={closeDetail}>Chiudi</button>
+              {isAdmin && (
+                <>
+                  <button className="btn ghost" onClick={() => editFromDetail(viewingPlayer)}>Modifica</button>
+                  <button className="btn" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(viewingPlayer.id)}>Elimina</button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </section>
