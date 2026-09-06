@@ -187,24 +187,6 @@ nav.tabs a.active {
   }
 }
 
-@media (max-width: 900px) {
-  .stats-layout {
-    flex-direction: column;
-  }
-  .stats-sidebar {
-    width: 100%;
-    position: static;
-  }
-  .stats-player-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    max-height: none;
-  }
-  .stats-player-btn {
-    width: auto;
-  }
-}
-
 main {
   max-width: 980px;
   margin: 0 auto;
@@ -824,9 +806,13 @@ table.matrix tbody tr:nth-child(even) th {
   align-items: flex-start;
   gap: 20px;
   margin-top: 16px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 .stats-sidebar {
   width: 240px;
+  max-width: 100%;
+  min-width: 0;
   flex-shrink: 0;
   position: sticky;
   top: 16px;
@@ -846,6 +832,8 @@ table.matrix tbody tr:nth-child(even) th {
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid var(--linea);
   border-radius: 6px;
@@ -855,6 +843,10 @@ table.matrix tbody tr:nth-child(even) th {
   color: var(--inchiostro);
   cursor: pointer;
   text-align: left;
+}
+.stats-player-btn span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .stats-player-btn.active {
   border-color: var(--blu);
@@ -877,28 +869,34 @@ table.matrix tbody tr:nth-child(even) th {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-top: 4px;
+  max-width: 100%;
 }
 .stat-card {
   background: var(--panna);
   border: 1px solid var(--linea);
   border-radius: 8px;
   padding: 12px 14px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .stat-value {
   font-family: 'Barlow Condensed';
   font-weight: 800;
   font-size: 26px;
   color: var(--blu-scuro);
+  overflow-wrap: anywhere;
 }
 .stat-label {
   font-size: 12.5px;
   color: var(--inchiostro-soft);
   margin-top: 2px;
+  overflow-wrap: anywhere;
 }
 .stat-sub {
   font-size: 11.5px;
   color: var(--inchiostro-soft);
   margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 .rate-good {
@@ -1008,7 +1006,9 @@ table.matrix tbody tr:nth-child(even) th {
 }
 
 .line-chart {
+  display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
   margin-top: 8px;
 }
@@ -1343,5 +1343,19 @@ table.matrix tbody tr:nth-child(even) th {
 
   .settings-box {
     padding: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .stats-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .stats-sidebar {
+    width: 100%;
+    position: static;
+  }
+  .stats-player-list {
+    max-height: none;
   }
 }
