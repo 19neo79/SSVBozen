@@ -287,9 +287,16 @@ export default function RosterPage() {
             return (
               <button className="roster-row" key={p.id} onClick={() => openDetail(p.id)}>
                 <span className="num-badge">{p.numero ?? '–'}</span>
-                <span className="roster-row-name">{p.cognome} {p.nome}</span>
-                {cert.warn && <span className="cert-warn roster-row-cert">{cert.label}</span>}
-                <CategoriaTag dataNascita={p.data_nascita} />
+                <div className="roster-row-main">
+                  <div className="roster-row-top">
+                    <span className="roster-row-name">{p.cognome} {p.nome}</span>
+                    <CategoriaTag dataNascita={p.data_nascita} />
+                  </div>
+                  <div className="roster-row-meta">
+                    {p.data_nascita ? fmtDateShort(p.data_nascita) : '—'} · {p.telefono_atleta || '—'}
+                    {cert.warn && <span className="cert-warn"> · {cert.label}</span>}
+                  </div>
+                </div>
                 <span className="roster-row-chevron">›</span>
               </button>
             );

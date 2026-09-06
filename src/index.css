@@ -358,13 +358,25 @@ tr:last-child td {
 .roster-row:hover {
   border-color: var(--blu);
 }
+.roster-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.roster-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .roster-row-name {
   flex: 1;
   font-weight: 600;
 }
-.roster-row-cert {
+.roster-row-meta {
   font-size: 12.5px;
-  white-space: nowrap;
+  color: var(--inchiostro-soft);
 }
 .roster-row-chevron {
   color: var(--inchiostro-soft);
