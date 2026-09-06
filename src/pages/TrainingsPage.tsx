@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
@@ -57,6 +57,10 @@ export default function TrainingsPage() {
   const [singleConvocati, setSingleConvocati] = useState<string[]>([]);
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
+  const [openProgrammati, setOpenProgrammati] = useState(false);
+  const [openInCorso, setOpenInCorso] = useState(true);
+  const [openPassati, setOpenPassati] = useState(false);
+  const programmatiInitialized = useRef(false);
 
   useEffect(() => {
     const allIds = roster.map((p) => p.id);
@@ -193,11 +197,108 @@ export default function TrainingsPage() {
     }
   }
 
-  const sortedTrainings = [...trainings].sort((a, b) => a.data.localeCompare(b.data));
   const playerLabel = (id: string) => {
     const p = roster.find((x) => x.id === id);
     return p ? `${p.cognome} ${p.nome}` : '?';
   };
+
+  const currentWeek = weekRangeFor(todayISO());
+  const weekStart = currentWeek[0];
+  const weekEnd = currentWeek[6];
+  const passatiList = trainings.filter((t) => t.data < weekStart).sort((a, b) => b.data.localeCompare(a.data));
+  const inCorsoList = trainings.filter((t) => t.data >= weekStart && t.data <= weekEnd).sort((a, b) => a.data.localeCompare(b.data));
+  const programmatiList = trainings.filter((t) => t.data > weekEnd).sort((a, b) => a.data.localeCompare(b.data));
+
+  useEffect(() => {
+    if (programmatiInitialized.current || trainings.length === 0) return;
+    programmatiInitialized.current = true;
+    setOpenProgrammati(programmatiList.length > 0);
+  }, [trainings.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function renderTraining(t: Training) {
+    const presenze = t.presenze || [];
+    const convocati = t.convocati || [];
+    const convocatiPlayers = convocati
+      .map((id) => roster.find((p) => p.id === id))
+      .filter((p): p is NonNullable<typeof p> => !!p)
+      .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+    const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
+    const isEditingConvocati = editingConvocatiId === t.id;
+    return (
+      <div className="event" key={t.id}>
+        <div className="event-main">
+          <div className="event-date">{fmtDate(t.data)}</div>
+          <div className="event-detail">
+            {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+          </div>
+          {isEditingConvocati ? (
+            <div className="field" style={{ marginTop: 10 }}>
+              <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+                <label style={{ margin: 0 }}>Convocati</label>
+                <SelectAllButton players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+              </div>
+              <PlayerChecks players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+              <div className="settings-actions">
+                <button className="btn ghost" onClick={closeEditConvocati}>Annulla</button>
+                <button className="btn" onClick={() => saveEditConvocati(t)}>Salva convocati</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="event-conv">Convocati: {convocati.length} — {convocati.map(playerLabel).join(', ') || 'nessuno'}</div>
+              <div className="event-conv">Presenti: {presenze.length} / {convocati.length}</div>
+              {convocatiPlayers.length === 0 ? (
+                <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+              ) : (
+                <div className="checks">
+                  {convocatiPlayers.map((p) => (
+                    <label className="chk" key={p.id}>
+                      <input
+                        type="checkbox"
+                        checked={presenze.includes(p.id)}
+                        onChange={(e) => togglePresenza(t, p.id, e.target.checked)}
+                      />
+                      {p.numero ?? ''} {p.cognome} {p.nome}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {!isEditingConvocati && (
+          <div className="event-actions">
+            <button className="btn ghost small" onClick={() => openEditConvocati(t)}>Modifica convocati</button>
+            <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(t.id)}>Elimina</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderSection(
+    title: string,
+    list: Training[],
+    open: boolean,
+    onToggle: () => void,
+    emptyText: string,
+  ) {
+    return (
+      <div className="card">
+        <button type="button" className="section-toggle" onClick={onToggle} aria-expanded={open}>
+          <span className="section-toggle-title">
+            {title} <span className="section-badge">{list.length}</span>
+          </span>
+          <span className={`section-chevron${open ? ' open' : ''}`}>›</span>
+        </button>
+        {open && (
+          <div className="event-list">
+            {list.length === 0 ? <div className="empty">{emptyText}</div> : list.map(renderTraining)}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section>
@@ -292,72 +393,9 @@ export default function TrainingsPage() {
           </div>
         </div>
 
-      <div className="event-list">
-        {sortedTrainings.length === 0 ? (
-          <div className="empty">Nessun allenamento inserito.</div>
-        ) : (
-          sortedTrainings.map((t) => {
-            const presenze = t.presenze || [];
-            const convocati = t.convocati || [];
-            const convocatiPlayers = convocati
-              .map((id) => roster.find((p) => p.id === id))
-              .filter((p): p is NonNullable<typeof p> => !!p)
-              .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
-            const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
-            const isEditingConvocati = editingConvocatiId === t.id;
-            return (
-              <div className="event" key={t.id}>
-                <div className="event-main">
-                  <div className="event-date">{fmtDate(t.data)}</div>
-                  <div className="event-detail">
-                    {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                  </div>
-                  {isEditingConvocati ? (
-                    <div className="field" style={{ marginTop: 10 }}>
-                      <div className="row" style={{ alignItems: 'center', gap: 10 }}>
-                        <label style={{ margin: 0 }}>Convocati</label>
-                        <SelectAllButton players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
-                      </div>
-                      <PlayerChecks players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
-                      <div className="settings-actions">
-                        <button className="btn ghost" onClick={closeEditConvocati}>Annulla</button>
-                        <button className="btn" onClick={() => saveEditConvocati(t)}>Salva convocati</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="event-conv">Convocati: {convocati.length} — {convocati.map(playerLabel).join(', ') || 'nessuno'}</div>
-                      <div className="event-conv">Presenti: {presenze.length} / {convocati.length}</div>
-                      {convocatiPlayers.length === 0 ? (
-                        <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
-                      ) : (
-                        <div className="checks">
-                          {convocatiPlayers.map((p) => (
-                            <label className="chk" key={p.id}>
-                              <input
-                                type="checkbox"
-                                checked={presenze.includes(p.id)}
-                                onChange={(e) => togglePresenza(t, p.id, e.target.checked)}
-                              />
-                              {p.numero ?? ''} {p.cognome} {p.nome}
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                {!isEditingConvocati && (
-                  <div className="event-actions">
-                    <button className="btn ghost small" onClick={() => openEditConvocati(t)}>Modifica convocati</button>
-                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(t.id)}>Elimina</button>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+      {renderSection('Allenamenti programmati', programmatiList, openProgrammati, () => setOpenProgrammati((v) => !v), 'Nessun allenamento programmato oltre questa settimana.')}
+      {renderSection('Allenamenti in corso', inCorsoList, openInCorso, () => setOpenInCorso((v) => !v), 'Nessun allenamento questa settimana.')}
+      {renderSection('Allenamenti passati', passatiList, openPassati, () => setOpenPassati((v) => !v), 'Nessun allenamento passato.')}
     </section>
   );
 }
