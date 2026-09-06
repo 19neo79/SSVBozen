@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useUi } from '../contexts/UiContext';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
@@ -83,11 +84,14 @@ export default function WeekPlanPage() {
         </div>
       </div>
 
-      <div id="stampa-piano">
-        <div className="foglio">
-          <FoglioSettimanale days={days} trainings={trainings} matches={matches} roster={roster} settings={settings} locatables={locatables} />
-        </div>
-      </div>
+      {createPortal(
+        <div id="stampa-piano">
+          <div className="foglio">
+            <FoglioSettimanale days={days} trainings={trainings} matches={matches} roster={roster} settings={settings} locatables={locatables} />
+          </div>
+        </div>,
+        document.body,
+      )}
     </section>
   );
 }

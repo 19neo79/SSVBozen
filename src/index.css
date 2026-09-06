@@ -594,20 +594,14 @@ tr:last-child td {
     size: A4 landscape;
     margin: 10mm;
   }
-  body * {
-    visibility: hidden;
-  }
-  #stampa-piano,
-  #stampa-piano * {
-    visibility: visible;
+  #root {
+    display: none !important;
   }
   #stampa-piano {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 277mm;
     height: 190mm;
+    margin: 0;
     padding: 0;
     overflow: hidden;
   }
