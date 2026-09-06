@@ -58,9 +58,10 @@ export default function TrainingsPage() {
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
   const [openProgrammati, setOpenProgrammati] = useState(false);
-  const [openInCorso, setOpenInCorso] = useState(true);
+  const [openInCorso, setOpenInCorso] = useState(false);
   const [openPassati, setOpenPassati] = useState(false);
   const programmatiInitialized = useRef(false);
+  const inCorsoInitialized = useRef(false);
 
   useEffect(() => {
     const allIds = roster.map((p) => p.id);
@@ -213,6 +214,12 @@ export default function TrainingsPage() {
     if (programmatiInitialized.current || trainings.length === 0) return;
     programmatiInitialized.current = true;
     setOpenProgrammati(programmatiList.length > 0);
+  }, [trainings.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (inCorsoInitialized.current || trainings.length === 0) return;
+    inCorsoInitialized.current = true;
+    setOpenInCorso(inCorsoList.length > 0);
   }, [trainings.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function renderTraining(t: Training) {
