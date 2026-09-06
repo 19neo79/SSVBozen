@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUi } from '../contexts/UiContext';
 import { useDeletePlayer, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
 import type { RosterPlayer } from '../types/database';
+import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
 import {
   csvEscape,
@@ -288,6 +289,7 @@ export default function RosterPage() {
                 <span className="num-badge">{p.numero ?? '–'}</span>
                 <span className="roster-row-name">{p.cognome} {p.nome}</span>
                 {cert.warn && <span className="cert-warn roster-row-cert">{cert.label}</span>}
+                <CategoriaTag dataNascita={p.data_nascita} />
                 <span className="roster-row-chevron">›</span>
               </button>
             );
@@ -299,9 +301,10 @@ export default function RosterPage() {
         <div className="settings-modal open" onClick={closeDetail}>
           <div className="settings-box" onClick={(e) => e.stopPropagation()}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <h3 style={{ margin: 0 }}>
-                <span className="num-badge" style={{ marginRight: 8 }}>{viewingPlayer.numero ?? '–'}</span>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="num-badge">{viewingPlayer.numero ?? '–'}</span>
                 {viewingPlayer.cognome} {viewingPlayer.nome}
+                <CategoriaTag dataNascita={viewingPlayer.data_nascita} />
               </h3>
             </div>
             <dl className="detail-list">

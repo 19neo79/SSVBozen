@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
@@ -12,9 +12,11 @@ import {
 } from '../hooks/useMatches';
 import { TimeSingleInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
+import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
+import { isEligibleForCategoria } from '../lib/categoria';
 import type { CasaTrasferta, Categoria, Match } from '../types/database';
 
 const MATCH_HEADER_MAP: Record<string, string> = {
@@ -58,6 +60,11 @@ export default function MatchesPage() {
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
 
+  useEffect(() => {
+    setConvocati(roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria)).map((p) => p.id));
+  }, [roster.length, categoria]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const eligibleRoster = roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria));
   const opponent = avversari.find((o) => o.id === avvSel) || null;
   const filteredOpponents = avversari.filter((o) => o.categoria === categoria).sort((a, b) => a.nome.localeCompare(b.nome));
   const opponentVenues = opponent ? venues.filter((v) => v.avversario_id === opponent.id) : [];
@@ -301,9 +308,14 @@ export default function MatchesPage() {
         <div className="field" style={{ marginTop: 12 }}>
           <div className="row" style={{ alignItems: 'center', gap: 10 }}>
             <label style={{ margin: 0 }}>Convocati</label>
-            <SelectAllButton players={roster} selected={convocati} onChange={setConvocati} />
+            <SelectAllButton players={eligibleRoster} selected={convocati} onChange={setConvocati} />
           </div>
-          <PlayerChecks players={roster} selected={convocati} onChange={setConvocati} />
+          {categoria === 'U14' && (
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+              Convocabili solo gli atleti U14 (nati 2013–2015) — i nati 2012 giocano solo in U15.
+            </div>
+          )}
+          <PlayerChecks players={eligibleRoster} selected={convocati} onChange={setConvocati} />
         </div>
         <div className="settings-actions">
           <button className="btn red" onClick={handleAdd}>Aggiungi partita</button>
@@ -334,9 +346,14 @@ export default function MatchesPage() {
                     <div className="field" style={{ marginTop: 10 }}>
                       <div className="row" style={{ alignItems: 'center', gap: 10 }}>
                         <label style={{ margin: 0 }}>Convocati</label>
-                        <SelectAllButton players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                        <SelectAllButton players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
                       </div>
-                      <PlayerChecks players={roster} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                      {m.categoria === 'U14' && (
+                        <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+                          Convocabili solo gli atleti U14 (nati 2013–2015) — i nati 2012 giocano solo in U15.
+                        </div>
+                      )}
+                      <PlayerChecks players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
                       <div className="settings-actions">
                         <button className="btn ghost" onClick={closeEditConvocati}>Annulla</button>
                         <button className="btn" onClick={() => saveEditConvocati(m)}>Salva convocati</button>
@@ -358,6 +375,7 @@ export default function MatchesPage() {
                                 onChange={(e) => togglePresenza(m, p.id, e.target.checked)}
                               />
                               {p.numero ?? ''} {p.cognome} {p.nome}
+                              <CategoriaTag dataNascita={p.data_nascita} />
                             </label>
                           ))}
                         </div>

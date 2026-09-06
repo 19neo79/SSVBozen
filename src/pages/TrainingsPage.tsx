@@ -12,6 +12,7 @@ import {
 import { useRecurringDefaults, useSaveRecurringDefaults } from '../hooks/useRecurringDefaults';
 import { TimeRangeInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
+import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { fmtDate, fmtDateShort, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
 import type { Giorno, Training } from '../types/database';
@@ -266,6 +267,7 @@ export default function TrainingsPage() {
                         onChange={(e) => togglePresenza(t, p.id, e.target.checked)}
                       />
                       {p.numero ?? ''} {p.cognome} {p.nome}
+                      <CategoriaTag dataNascita={p.data_nascita} />
                     </label>
                   ))}
                 </div>
