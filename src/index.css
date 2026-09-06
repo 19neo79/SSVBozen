@@ -488,8 +488,8 @@ tr:last-child td {
 }
 
 .checks {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 8px;
 }
@@ -502,6 +502,9 @@ tr:last-child td {
   padding: 6px 10px;
   font-size: 13px;
   background: #fdfcf9;
+}
+.chk input[type='checkbox'] {
+  flex-shrink: 0;
 }
 
 .week-picker {
@@ -857,13 +860,11 @@ table.matrix tbody tr:nth-child(even) th {
     width: 100%;
   }
   .checks {
-    flex-direction: column;
     gap: 6px;
   }
   .chk {
-    width: 100%;
-    font-size: 13.5px;
-    padding: 8px 10px;
+    font-size: 12.5px;
+    padding: 6px 8px;
   }
 
   .week-picker {
