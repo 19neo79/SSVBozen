@@ -12,7 +12,7 @@ import {
 } from '../hooks/useMatches';
 import { TimeSingleInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
-import { CategoriaTag } from '../components/ui/CategoriaTag';
+import { AttendanceRow } from '../components/ui/AttendanceRow';
 import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
@@ -109,10 +109,38 @@ export default function MatchesPage() {
 
   async function togglePresenza(m: Match, playerId: string, checked: boolean) {
     const presenze = checked ? [...(m.presenze || []), playerId] : (m.presenze || []).filter((id) => id !== playerId);
+    const data: Partial<Match> = { presenze };
+    if (!checked) {
+      data.ritardi = (m.ritardi || []).filter((id) => id !== playerId);
+    } else {
+      const motivi = { ...(m.motivi_assenza || {}) };
+      delete motivi[playerId];
+      data.motivi_assenza = motivi;
+    }
     try {
-      await updateMatch.mutateAsync({ id: m.id, data: { presenze } });
+      await updateMatch.mutateAsync({ id: m.id, data });
     } catch {
       showToast('Errore nel salvataggio della presenza');
+    }
+  }
+
+  async function toggleRitardo(m: Match, playerId: string, checked: boolean) {
+    const ritardi = checked ? [...(m.ritardi || []), playerId] : (m.ritardi || []).filter((id) => id !== playerId);
+    try {
+      await updateMatch.mutateAsync({ id: m.id, data: { ritardi } });
+    } catch {
+      showToast('Errore nel salvataggio del ritardo');
+    }
+  }
+
+  async function setMotivoAssenza(m: Match, playerId: string, motivo: string) {
+    const motivi = { ...(m.motivi_assenza || {}) };
+    if (motivo) motivi[playerId] = motivo;
+    else delete motivi[playerId];
+    try {
+      await updateMatch.mutateAsync({ id: m.id, data: { motivi_assenza: motivi } });
+    } catch {
+      showToast('Errore nel salvataggio del motivo assenza');
     }
   }
 
@@ -364,19 +392,20 @@ export default function MatchesPage() {
                       <div className="event-conv">Convocati: {(m.convocati || []).length} — {(m.convocati || []).map(playerLabel).join(', ') || 'nessuno'}</div>
                       <div className="event-conv">Presenti: {presenze.length} / {(m.convocati || []).length}</div>
                       {convocatiPlayers.length === 0 ? (
-                        <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+                        <div className="attendance-list"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
                       ) : (
-                        <div className="checks">
+                        <div className="attendance-list">
                           {convocatiPlayers.map((p) => (
-                            <label className="chk" key={p.id}>
-                              <input
-                                type="checkbox"
-                                checked={presenze.includes(p.id)}
-                                onChange={(e) => togglePresenza(m, p.id, e.target.checked)}
-                              />
-                              {p.numero ?? ''} {p.cognome} {p.nome}
-                              <CategoriaTag dataNascita={p.data_nascita} />
-                            </label>
+                            <AttendanceRow
+                              key={p.id}
+                              player={p}
+                              presente={presenze.includes(p.id)}
+                              ritardo={(m.ritardi || []).includes(p.id)}
+                              motivo={(m.motivi_assenza || {})[p.id]}
+                              onTogglePresente={(checked) => togglePresenza(m, p.id, checked)}
+                              onToggleRitardo={(checked) => toggleRitardo(m, p.id, checked)}
+                              onSetMotivo={(motivo) => setMotivoAssenza(m, p.id, motivo)}
+                            />
                           ))}
                         </div>
                       )}

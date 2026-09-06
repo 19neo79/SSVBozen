@@ -12,7 +12,7 @@ import {
 import { useRecurringDefaults, useSaveRecurringDefaults } from '../hooks/useRecurringDefaults';
 import { TimeRangeInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
-import { CategoriaTag } from '../components/ui/CategoriaTag';
+import { AttendanceRow } from '../components/ui/AttendanceRow';
 import { WeekPicker } from '../components/ui/WeekPicker';
 import { fmtDate, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
@@ -168,10 +168,38 @@ export default function TrainingsPage() {
 
   async function togglePresenza(t: Training, playerId: string, checked: boolean) {
     const presenze = checked ? [...(t.presenze || []), playerId] : (t.presenze || []).filter((id) => id !== playerId);
+    const data: Partial<Training> = { presenze };
+    if (!checked) {
+      data.ritardi = (t.ritardi || []).filter((id) => id !== playerId);
+    } else {
+      const motivi = { ...(t.motivi_assenza || {}) };
+      delete motivi[playerId];
+      data.motivi_assenza = motivi;
+    }
     try {
-      await updateTraining.mutateAsync({ id: t.id, data: { presenze } });
+      await updateTraining.mutateAsync({ id: t.id, data });
     } catch {
       showToast('Errore nel salvataggio della presenza');
+    }
+  }
+
+  async function toggleRitardo(t: Training, playerId: string, checked: boolean) {
+    const ritardi = checked ? [...(t.ritardi || []), playerId] : (t.ritardi || []).filter((id) => id !== playerId);
+    try {
+      await updateTraining.mutateAsync({ id: t.id, data: { ritardi } });
+    } catch {
+      showToast('Errore nel salvataggio del ritardo');
+    }
+  }
+
+  async function setMotivoAssenza(t: Training, playerId: string, motivo: string) {
+    const motivi = { ...(t.motivi_assenza || {}) };
+    if (motivo) motivi[playerId] = motivo;
+    else delete motivi[playerId];
+    try {
+      await updateTraining.mutateAsync({ id: t.id, data: { motivi_assenza: motivi } });
+    } catch {
+      showToast('Errore nel salvataggio del motivo assenza');
     }
   }
 
@@ -264,19 +292,20 @@ export default function TrainingsPage() {
               <div className="event-conv">Convocati: {convocati.length} — {convocati.map(playerLabel).join(', ') || 'nessuno'}</div>
               <div className="event-conv">Presenti: {presenze.length} / {convocati.length}</div>
               {convocatiPlayers.length === 0 ? (
-                <div className="checks"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+                <div className="attendance-list"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
               ) : (
-                <div className="checks">
+                <div className="attendance-list">
                   {convocatiPlayers.map((p) => (
-                    <label className="chk" key={p.id}>
-                      <input
-                        type="checkbox"
-                        checked={presenze.includes(p.id)}
-                        onChange={(e) => togglePresenza(t, p.id, e.target.checked)}
-                      />
-                      {p.numero ?? ''} {p.cognome} {p.nome}
-                      <CategoriaTag dataNascita={p.data_nascita} />
-                    </label>
+                    <AttendanceRow
+                      key={p.id}
+                      player={p}
+                      presente={presenze.includes(p.id)}
+                      ritardo={(t.ritardi || []).includes(p.id)}
+                      motivo={(t.motivi_assenza || {})[p.id]}
+                      onTogglePresente={(checked) => togglePresenza(t, p.id, checked)}
+                      onToggleRitardo={(checked) => toggleRitardo(t, p.id, checked)}
+                      onSetMotivo={(motivo) => setMotivoAssenza(t, p.id, motivo)}
+                    />
                   ))}
                 </div>
               )}

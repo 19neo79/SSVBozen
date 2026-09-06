@@ -54,6 +54,8 @@ export interface Training {
   palestra_custom: string | null;
   convocati: string[];
   presenze: string[];
+  ritardi: string[];
+  motivi_assenza: Record<string, string>;
   created_at: string;
 }
 
@@ -69,6 +71,8 @@ export interface Match {
   luogo_custom: string | null;
   convocati: string[];
   presenze: string[];
+  ritardi: string[];
+  motivi_assenza: Record<string, string>;
   created_at: string;
 }
 
