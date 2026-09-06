@@ -826,6 +826,9 @@ table.matrix tbody tr:nth-child(even) th {
   flex: 1;
   min-width: 0;
 }
+.stats-main > .card:first-child {
+  margin-top: 0;
+}
 
 .stat-cards {
   display: grid;
