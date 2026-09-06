@@ -13,7 +13,8 @@ import { useRecurringDefaults, useSaveRecurringDefaults } from '../hooks/useRecu
 import { TimeRangeInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
-import { fmtDate, fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
+import { WeekPicker } from '../components/ui/WeekPicker';
+import { fmtDate, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
 import type { Giorno, Training } from '../types/database';
 
@@ -320,17 +321,16 @@ export default function TrainingsPage() {
     <section>
       <div className="card">
           <h3>Genera allenamenti della settimana</h3>
-          <div className="week-picker" style={{ marginBottom: 12 }}>
-            <button type="button" className="btn ghost small" onClick={() => shiftWeek(-7)}>← Settimana precedente</button>
-            <div className="week-range">{fmtDateShort(weekDays[0])} — {fmtDateShort(weekDays[6])}</div>
-            <button type="button" className="btn ghost small" onClick={() => shiftWeek(7)}>Settimana successiva →</button>
-            {!isCurrentWeek && (
-              <button type="button" className="btn small" onClick={() => setWeek(todayISO())}>Torna a questa settimana</button>
-            )}
-            <div className="field" style={{ marginLeft: 'auto' }}>
-              <label>Oppure scegli un giorno qualsiasi</label>
-              <input type="date" value={week} onChange={(e) => setWeek(e.target.value)} />
-            </div>
+          <div style={{ marginBottom: 12 }}>
+            <WeekPicker
+              rangeStart={weekDays[0]}
+              rangeEnd={weekDays[6]}
+              value={week}
+              isCurrentWeek={isCurrentWeek}
+              onShift={shiftWeek}
+              onReset={() => setWeek(todayISO())}
+              onPick={setWeek}
+            />
           </div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
             Genera sempre lunedì, mercoledì e venerdì della settimana scelta. Deseleziona un giorno per saltarlo (es. festivo).

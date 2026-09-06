@@ -539,19 +539,50 @@ tr:last-child td {
 
 .week-picker {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 14px;
-  flex-wrap: wrap;
   background: #fff;
   border: 1px solid var(--linea);
   border-radius: 8px;
-  padding: 14px 18px;
+  padding: 16px 18px;
+}
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 .week-range {
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 170px;
   font-family: 'Barlow Condensed';
   font-weight: 700;
   font-size: 19px;
   color: var(--blu-scuro);
+}
+.week-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.week-picker-alt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--linea);
+}
+.week-picker-alt label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--inchiostro-soft);
+  white-space: nowrap;
 }
 
 #stampa-piano {
@@ -898,13 +929,25 @@ table.matrix tbody tr:nth-child(even) th {
   }
 
   .week-picker {
+    padding: 14px;
+  }
+  .week-nav {
     flex-direction: column;
     align-items: stretch;
-    padding: 14px;
+  }
+  .week-picker-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .week-picker-alt {
+    flex-direction: column;
+    align-items: stretch;
   }
   .week-picker .btn {
     width: 100%;
-    margin-left: 0 !important;
+  }
+  .week-picker-alt input {
+    width: 100%;
   }
   .piano-preview {
     overflow-x: auto;

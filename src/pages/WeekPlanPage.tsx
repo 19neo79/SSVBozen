@@ -6,6 +6,7 @@ import { useTrainings } from '../hooks/useTrainings';
 import { useMatches } from '../hooks/useMatches';
 import { useSettings } from '../hooks/useSettings';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
+import { WeekPicker } from '../components/ui/WeekPicker';
 import { fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 
 export default function WeekPlanPage() {
@@ -47,19 +48,18 @@ export default function WeekPlanPage() {
 
   return (
     <section>
-      <div className="week-picker no-print">
-        <button className="btn ghost small" onClick={() => shiftWeek(-7)}>← Settimana precedente</button>
-        <div className="week-range">{fmtDateShort(days[0])} — {fmtDateShort(days[6])}</div>
-        <button className="btn ghost small" onClick={() => shiftWeek(7)}>Settimana successiva →</button>
-        {!isCurrentWeek && (
-          <button className="btn small" onClick={() => setPianoData(todayISO())}>Torna a questa settimana</button>
-        )}
-        <div className="field" style={{ marginLeft: 'auto' }}>
-          <label>Oppure scegli un giorno qualsiasi</label>
-          <input type="date" value={pianoData} onChange={(e) => setPianoData(e.target.value)} />
-        </div>
+      <WeekPicker
+        className="no-print"
+        rangeStart={days[0]}
+        rangeEnd={days[6]}
+        value={pianoData}
+        isCurrentWeek={isCurrentWeek}
+        onShift={shiftWeek}
+        onReset={() => setPianoData(todayISO())}
+        onPick={setPianoData}
+      >
         <button className="btn red" onClick={handlePrint}>Stampa / Salva PDF</button>
-      </div>
+      </WeekPicker>
 
       <div className="card no-print">
         <h3 style={{ fontSize: 17 }}>Condividi questa settimana</h3>
