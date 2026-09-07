@@ -19,7 +19,7 @@ export function AttendanceRow({
     <div className="attendance-row">
       <div className="attendance-name">
         {player.numero ?? ''} {player.cognome} {player.nome}
-        <CategoriaTag dataNascita={player.data_nascita} />
+        <CategoriaTag dataNascita={player.data_nascita} soloU15={player.solo_u15} />
       </div>
       <div className="attendance-controls">
         <label className="chk small">

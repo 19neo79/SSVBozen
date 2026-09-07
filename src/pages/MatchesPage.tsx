@@ -61,10 +61,10 @@ export default function MatchesPage() {
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
 
   useEffect(() => {
-    setConvocati(roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria)).map((p) => p.id));
+    setConvocati(roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria, p.solo_u15)).map((p) => p.id));
   }, [roster.length, categoria]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const eligibleRoster = roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria));
+  const eligibleRoster = roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria, p.solo_u15));
   const opponent = avversari.find((o) => o.id === avvSel) || null;
   const filteredOpponents = avversari.filter((o) => o.categoria === categoria).sort((a, b) => a.nome.localeCompare(b.nome));
   const opponentVenues = opponent ? venues.filter((v) => v.avversario_id === opponent.id) : [];
@@ -376,14 +376,14 @@ export default function MatchesPage() {
                     <div className="field" style={{ marginTop: 10 }}>
                       <div className="row" style={{ alignItems: 'center', gap: 10 }}>
                         <label style={{ margin: 0 }}>Convocati</label>
-                        <SelectAllButton players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                        <SelectAllButton players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria, p.solo_u15))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
                       </div>
                       {m.categoria === 'U14' && (
                         <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
                           Convocabili solo gli atleti U14 (nati 2013–2015) — i nati 2012 giocano solo in U15.
                         </div>
                       )}
-                      <PlayerChecks players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
+                      <PlayerChecks players={roster.filter((p) => isEligibleForCategoria(p.data_nascita, m.categoria, p.solo_u15))} selected={editingConvocatiSelection} onChange={setEditingConvocatiSelection} />
                       <div className="settings-actions">
                         <button className="btn ghost" onClick={closeEditConvocati}>Annulla</button>
                         <button className="btn" onClick={() => saveEditConvocati(m)}>Salva convocati</button>

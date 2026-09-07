@@ -46,6 +46,7 @@ export interface RosterPlayer {
   nome_mamma: string | null;
   telefono_mamma: string | null;
   certificato: string | null;
+  solo_u15: boolean;
   created_at: string;
 }
 

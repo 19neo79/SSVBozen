@@ -35,6 +35,7 @@ const CSV_HEADER_MAP: Record<string, string> = {
 const emptyForm = {
   nome: '', cognome: '', numero: '', data_nascita: '', codice_fiscale: '', ruolo: '',
   telefono_atleta: '', nome_papa: '', telefono_papa: '', nome_mamma: '', telefono_mamma: '', certificato: '',
+  solo_u15: false,
 };
 
 function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean } {
@@ -68,6 +69,7 @@ export default function RosterPage() {
         data_nascita: p.data_nascita || '', codice_fiscale: p.codice_fiscale || '', ruolo: p.ruolo || '',
         telefono_atleta: p.telefono_atleta || '', nome_papa: p.nome_papa || '', telefono_papa: p.telefono_papa || '',
         nome_mamma: p.nome_mamma || '', telefono_mamma: p.telefono_mamma || '', certificato: p.certificato || '',
+        solo_u15: p.solo_u15,
       });
     } else {
       setEditingId(null);
@@ -99,6 +101,7 @@ export default function RosterPage() {
       nome_mamma: form.nome_mamma.trim() || null,
       telefono_mamma: form.telefono_mamma.trim() || null,
       certificato: form.certificato || null,
+      solo_u15: form.solo_u15,
     };
     try {
       await savePlayer.mutateAsync({ id: editingId, data });
@@ -271,6 +274,12 @@ export default function RosterPage() {
           <div className="row" style={{ marginTop: 12 }}>
             <div className="field"><label>Scadenza certificato medico</label><input type="date" value={form.certificato} onChange={(e) => setForm({ ...form, certificato: e.target.value })} /></div>
           </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <label className="chk">
+              <input type="checkbox" checked={form.solo_u15} onChange={(e) => setForm({ ...form, solo_u15: e.target.checked })} />
+              Può giocare solo in U15 (nonostante l'età sia U14)
+            </label>
+          </div>
           <div className="settings-actions">
             <button className="btn ghost" onClick={closeForm}>Annulla</button>
             <button className="btn" onClick={handleSave}>Salva</button>
@@ -290,7 +299,7 @@ export default function RosterPage() {
                 <div className="roster-row-main">
                   <div className="roster-row-top">
                     <span className="roster-row-name">{p.cognome} {p.nome}</span>
-                    <CategoriaTag dataNascita={p.data_nascita} />
+                    <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
                   </div>
                   <div className="roster-row-meta">
                     {p.data_nascita ? fmtDateShort(p.data_nascita) : '—'} · {p.telefono_atleta || '—'}
@@ -311,7 +320,7 @@ export default function RosterPage() {
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="num-badge">{viewingPlayer.numero ?? '–'}</span>
                 {viewingPlayer.cognome} {viewingPlayer.nome}
-                <CategoriaTag dataNascita={viewingPlayer.data_nascita} />
+                <CategoriaTag dataNascita={viewingPlayer.data_nascita} soloU15={viewingPlayer.solo_u15} />
               </h3>
             </div>
             <dl className="detail-list">

@@ -120,7 +120,7 @@ export default function StatsPage() {
               >
                 <span className="num-badge">{p.numero ?? '–'}</span>
                 <span style={{ flex: 1 }}>{p.cognome} {p.nome}</span>
-                <CategoriaTag dataNascita={p.data_nascita} />
+                <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
               </button>
             ))}
           </div>
@@ -429,7 +429,7 @@ function TeamStatsView({
                     <tr key={p.id}>
                       <td>
                         <span className="num-badge" style={{ marginRight: 8 }}>{p.numero ?? '–'}</span>
-                        {p.cognome} {p.nome} <CategoriaTag dataNascita={p.data_nascita} />
+                        {p.cognome} {p.nome} <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
                       </td>
                       <td className={rateClass(tRate)}>{s.trainingConv > 0 ? `${s.trainingPres}/${s.trainingConv} (${tRate}%)` : '—'}</td>
                       <td className={rateClass(mRate)}>{s.matchConv > 0 ? `${s.matchPres}/${s.matchConv} (${mRate}%)` : '—'}</td>
@@ -472,7 +472,7 @@ function PlayerStatsView({
         <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="num-badge">{player.numero ?? '–'}</span>
           {player.cognome} {player.nome}
-          <CategoriaTag dataNascita={player.data_nascita} />
+          <CategoriaTag dataNascita={player.data_nascita} soloU15={player.solo_u15} />
         </h3>
         <div className="stat-cards">
           <RateCard label="Allenamenti" r={trainingRate} sub={`${stats.trainingPres}/${stats.trainingConv} convocazioni · ${stats.trainingRitardi} ritardi`} />

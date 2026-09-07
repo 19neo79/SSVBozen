@@ -22,9 +22,13 @@ export function playerCategory(dataNascita: string | null): Categoria | null {
 
 /**
  * Un U14 (2013-2015) può sempre giocare anche in U15, ma un nato 2012 non
- * può scendere in U14. Un giocatore senza data di nascita non viene bloccato.
+ * può scendere in U14 (regola federale). Un giocatore senza data di nascita
+ * non viene bloccato. soloU15 gestisce l'eccezione societaria opposta: un
+ * atleta nato 2013-2015 che per motivi tecnici/societari può giocare solo
+ * in U15, non in U14.
  */
-export function isEligibleForCategoria(dataNascita: string | null, categoria: Categoria): boolean {
+export function isEligibleForCategoria(dataNascita: string | null, categoria: Categoria, soloU15?: boolean): boolean {
+  if (soloU15) return categoria === 'U15';
   if (categoria === 'U15') return true;
   return birthYear(dataNascita) !== U15_BIRTH_YEAR;
 }

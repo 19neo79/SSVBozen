@@ -321,6 +321,9 @@ tr:last-child td {
 .tag-categoria.u15 {
   background: var(--rosso);
 }
+.tag-categoria.solo-u15 {
+  background: #a86a00;
+}
 .muted {
   color: var(--inchiostro-soft);
 }

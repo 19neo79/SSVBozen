@@ -26,7 +26,7 @@ export function PlayerChecks({ players, selected, onChange, emptyMessage }: Play
         <label className="chk" key={p.id}>
           <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />
           {p.numero ?? ''} {p.cognome} {p.nome}
-          <CategoriaTag dataNascita={p.data_nascita} />
+          <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
         </label>
       ))}
     </div>
