@@ -86,10 +86,13 @@ export interface Settings {
   logo_url: string | null;
   coach_nome: string | null;
   coach_telefono: string | null;
+  coach_email: string | null;
   vice_coach_nome: string | null;
   vice_coach_telefono: string | null;
+  vice_coach_email: string | null;
   dirigente_nome: string | null;
   dirigente_telefono: string | null;
+  dirigente_email: string | null;
 }
 
 export interface RecurringDefault {
@@ -106,10 +109,13 @@ export interface PublicSettingsBasic {
   logo_url: string | null;
   coach_nome: string | null;
   coach_telefono: string | null;
+  coach_email: string | null;
   vice_coach_nome: string | null;
   vice_coach_telefono: string | null;
+  vice_coach_email: string | null;
   dirigente_nome: string | null;
   dirigente_telefono: string | null;
+  dirigente_email: string | null;
 }
 
 export interface PublicRosterBasic {

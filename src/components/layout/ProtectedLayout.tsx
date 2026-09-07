@@ -70,6 +70,9 @@ export function ProtectedLayout() {
         <NavLink to="/app/rosa" className={({ isActive }) => (isActive ? 'active' : '')}>
           Rosa
         </NavLink>
+        <NavLink to="/app/staff" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Staff tecnico
+        </NavLink>
         {isAdmin && (
           <>
             <NavLink to="/app/palestre" className={({ isActive }) => (isActive ? 'active' : '')}>

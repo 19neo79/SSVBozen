@@ -32,10 +32,13 @@ interface FoglioSettings {
   logo_url: string | null;
   coach_nome?: string | null;
   coach_telefono?: string | null;
+  coach_email?: string | null;
   vice_coach_nome?: string | null;
   vice_coach_telefono?: string | null;
+  vice_coach_email?: string | null;
   dirigente_nome?: string | null;
   dirigente_telefono?: string | null;
+  dirigente_email?: string | null;
 }
 
 interface FoglioProps {
@@ -64,10 +67,10 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
 
   const clubName = settings?.club_name || 'SSV Bozen Volley';
 
-  const referenti: { ruolo: string; nome: string; telefono: string | null }[] = [
-    { ruolo: 'Coach', nome: settings?.coach_nome || '', telefono: settings?.coach_telefono || null },
-    { ruolo: 'Vice Coach', nome: settings?.vice_coach_nome || '', telefono: settings?.vice_coach_telefono || null },
-    { ruolo: 'Dirigente', nome: settings?.dirigente_nome || '', telefono: settings?.dirigente_telefono || null },
+  const referenti: { ruolo: string; nome: string; telefono: string | null; email: string | null }[] = [
+    { ruolo: 'Coach', nome: settings?.coach_nome || '', telefono: settings?.coach_telefono || null, email: settings?.coach_email || null },
+    { ruolo: 'Vice Coach', nome: settings?.vice_coach_nome || '', telefono: settings?.vice_coach_telefono || null, email: settings?.vice_coach_email || null },
+    { ruolo: 'Dirigente', nome: settings?.dirigente_nome || '', telefono: settings?.dirigente_telefono || null, email: settings?.dirigente_email || null },
   ].filter((r) => r.nome);
 
   return (
@@ -93,7 +96,9 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
           {referenti.map((r, i) => (
             <span key={r.ruolo}>
               {i > 0 && ' · '}
-              {r.ruolo} {r.nome}{r.telefono && <> <a href={`tel:${r.telefono}`}>{r.telefono}</a></>}
+              {r.ruolo} {r.nome}
+              {r.telefono && <> <a href={`tel:${r.telefono}`}>{r.telefono}</a></>}
+              {r.email && <> <a href={`mailto:${r.email}`}>{r.email}</a></>}
             </span>
           ))}
         </div>

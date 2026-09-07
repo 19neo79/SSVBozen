@@ -685,7 +685,8 @@ tr:last-child td {
   }
   #stampa-piano .foglio-referenti {
     font-size: 9.5px;
-    margin: -2px 0 6px;
+    line-height: 1.4;
+    margin: 4px 0 6px;
     flex: none;
   }
   #stampa-piano table.matrix {
@@ -749,9 +750,10 @@ tr:last-child td {
   margin: 20px 0 8px;
 }
 .foglio-referenti {
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--inchiostro-soft);
-  margin: -4px 0 12px;
+  margin: 12px 0 16px;
 }
 .foglio-referenti a {
   color: var(--blu);

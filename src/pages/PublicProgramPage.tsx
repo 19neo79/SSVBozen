@@ -20,10 +20,13 @@ interface PublicData {
   logoUrl: string | null;
   coachNome: string | null;
   coachTelefono: string | null;
+  coachEmail: string | null;
   viceCoachNome: string | null;
   viceCoachTelefono: string | null;
+  viceCoachEmail: string | null;
   dirigenteNome: string | null;
   dirigenteTelefono: string | null;
+  dirigenteEmail: string | null;
 }
 
 function weekFromSearchParams(params: URLSearchParams): string {
@@ -71,10 +74,13 @@ export default function PublicProgramPage() {
         logoUrl: settingsRow?.logo_url || null,
         coachNome: settingsRow?.coach_nome || null,
         coachTelefono: settingsRow?.coach_telefono || null,
+        coachEmail: settingsRow?.coach_email || null,
         viceCoachNome: settingsRow?.vice_coach_nome || null,
         viceCoachTelefono: settingsRow?.vice_coach_telefono || null,
+        viceCoachEmail: settingsRow?.vice_coach_email || null,
         dirigenteNome: settingsRow?.dirigente_nome || null,
         dirigenteTelefono: settingsRow?.dirigente_telefono || null,
+        dirigenteEmail: settingsRow?.dirigente_email || null,
       });
     }
     load();
@@ -148,9 +154,9 @@ export default function PublicProgramPage() {
               roster={data.roster}
               settings={{
                 club_name: data.clubName, logo_url: data.logoUrl,
-                coach_nome: data.coachNome, coach_telefono: data.coachTelefono,
-                vice_coach_nome: data.viceCoachNome, vice_coach_telefono: data.viceCoachTelefono,
-                dirigente_nome: data.dirigenteNome, dirigente_telefono: data.dirigenteTelefono,
+                coach_nome: data.coachNome, coach_telefono: data.coachTelefono, coach_email: data.coachEmail,
+                vice_coach_nome: data.viceCoachNome, vice_coach_telefono: data.viceCoachTelefono, vice_coach_email: data.viceCoachEmail,
+                dirigente_nome: data.dirigenteNome, dirigente_telefono: data.dirigenteTelefono, dirigente_email: data.dirigenteEmail,
               }}
               locatables={data.venues}
             />
