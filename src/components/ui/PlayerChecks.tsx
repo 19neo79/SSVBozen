@@ -9,7 +9,7 @@ interface PlayerChecksProps {
 }
 
 export function PlayerChecks({ players, selected, onChange, emptyMessage }: PlayerChecksProps) {
-  const sorted = [...players].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+  const sorted = [...players].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
 
   if (sorted.length === 0) {
     return <span className="muted">{emptyMessage || 'Nessun giocatore in rosa — aggiungili prima nella Rosa.'}</span>;
@@ -20,8 +20,10 @@ export function PlayerChecks({ players, selected, onChange, emptyMessage }: Play
     else onChange([...selected, id]);
   }
 
+  const rows = Math.ceil(sorted.length / 2);
+
   return (
-    <div className="checks">
+    <div className="checks" style={{ gridTemplateRows: `repeat(${rows}, auto)` }}>
       {sorted.map((p) => (
         <label className="chk" key={p.id}>
           <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />
