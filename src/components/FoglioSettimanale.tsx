@@ -30,6 +30,12 @@ export interface FoglioPlayer {
 interface FoglioSettings {
   club_name: string;
   logo_url: string | null;
+  coach_nome?: string | null;
+  coach_telefono?: string | null;
+  vice_coach_nome?: string | null;
+  vice_coach_telefono?: string | null;
+  dirigente_nome?: string | null;
+  dirigente_telefono?: string | null;
 }
 
 interface FoglioProps {
@@ -58,6 +64,12 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
 
   const clubName = settings?.club_name || 'SSV Bozen Volley';
 
+  const referenti: { ruolo: string; nome: string; telefono: string | null }[] = [
+    { ruolo: 'Coach', nome: settings?.coach_nome || '', telefono: settings?.coach_telefono || null },
+    { ruolo: 'Vice Coach', nome: settings?.vice_coach_nome || '', telefono: settings?.vice_coach_telefono || null },
+    { ruolo: 'Dirigente', nome: settings?.dirigente_nome || '', telefono: settings?.dirigente_telefono || null },
+  ].filter((r) => r.nome);
+
   return (
     <>
       <div className="foglio-head">
@@ -76,6 +88,16 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
       </div>
 
       <div className="sezione-title">Programma della settimana</div>
+      {referenti.length > 0 && (
+        <div className="foglio-referenti">
+          {referenti.map((r, i) => (
+            <span key={r.ruolo}>
+              {i > 0 && ' · '}
+              {r.ruolo} {r.nome}{r.telefono && <> <a href={`tel:${r.telefono}`}>{r.telefono}</a></>}
+            </span>
+          ))}
+        </div>
+      )}
 
       {events.length === 0 ? (
         <div className="muted" style={{ padding: '8px 0' }}>Nessun allenamento o partita programmati questa settimana.</div>

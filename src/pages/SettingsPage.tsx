@@ -46,6 +46,12 @@ export default function SettingsPage() {
   const [clubName, setClubName] = useState('');
   const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [coachNome, setCoachNome] = useState('');
+  const [coachTelefono, setCoachTelefono] = useState('');
+  const [viceCoachNome, setViceCoachNome] = useState('');
+  const [viceCoachTelefono, setViceCoachTelefono] = useState('');
+  const [dirigenteNome, setDirigenteNome] = useState('');
+  const [dirigenteTelefono, setDirigenteTelefono] = useState('');
 
   const [newUserFormOpen, setNewUserFormOpen] = useState(false);
   const [newUser, setNewUser] = useState(emptyNewUser);
@@ -53,7 +59,14 @@ export default function SettingsPage() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (settings) setClubName(settings.club_name || '');
+    if (!settings) return;
+    setClubName(settings.club_name || '');
+    setCoachNome(settings.coach_nome || '');
+    setCoachTelefono(settings.coach_telefono || '');
+    setViceCoachNome(settings.vice_coach_nome || '');
+    setViceCoachTelefono(settings.vice_coach_telefono || '');
+    setDirigenteNome(settings.dirigente_nome || '');
+    setDirigenteTelefono(settings.dirigente_telefono || '');
   }, [settings]);
 
   async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -69,7 +82,15 @@ export default function SettingsPage() {
 
   async function handleSave() {
     try {
-      const data: { club_name: string; logo_url?: string } = { club_name: clubName.trim() || 'SSV Bozen Volley' };
+      const data: { club_name: string; logo_url?: string; [key: string]: string | null | undefined } = {
+        club_name: clubName.trim() || 'SSV Bozen Volley',
+        coach_nome: coachNome.trim() || null,
+        coach_telefono: coachTelefono.trim() || null,
+        vice_coach_nome: viceCoachNome.trim() || null,
+        vice_coach_telefono: viceCoachTelefono.trim() || null,
+        dirigente_nome: dirigenteNome.trim() || null,
+        dirigente_telefono: dirigenteTelefono.trim() || null,
+      };
       if (pendingLogo) data.logo_url = pendingLogo;
       await updateSettings.mutateAsync(data);
       setPendingLogo(null);
@@ -259,6 +280,23 @@ export default function SettingsPage() {
             />
           )}
         </div>
+        <h3 style={{ marginTop: 24 }}>Referenti staff</h3>
+        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          Mostrati nel piano settimanale (pagina pubblica, anteprima e stampa) così i genitori sanno chi contattare. Lascia vuoto un nome per non mostrare quel ruolo.
+        </div>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <div className="field"><label>Coach</label><input value={coachNome} onChange={(e) => setCoachNome(e.target.value)} style={{ width: 200 }} /></div>
+          <div className="field"><label>Cellulare coach</label><input value={coachTelefono} onChange={(e) => setCoachTelefono(e.target.value)} style={{ width: 160 }} /></div>
+        </div>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <div className="field"><label>Vice coach</label><input value={viceCoachNome} onChange={(e) => setViceCoachNome(e.target.value)} style={{ width: 200 }} /></div>
+          <div className="field"><label>Cellulare vice coach</label><input value={viceCoachTelefono} onChange={(e) => setViceCoachTelefono(e.target.value)} style={{ width: 160 }} /></div>
+        </div>
+        <div className="row" style={{ marginBottom: 14 }}>
+          <div className="field"><label>Dirigente</label><input value={dirigenteNome} onChange={(e) => setDirigenteNome(e.target.value)} style={{ width: 200 }} /></div>
+          <div className="field"><label>Cellulare dirigente</label><input value={dirigenteTelefono} onChange={(e) => setDirigenteTelefono(e.target.value)} style={{ width: 160 }} /></div>
+        </div>
+
         <div className="field">
           <label>Cambia la tua password di accesso (lascia vuoto per non modificarla)</label>
           <input type="password" placeholder="Nuova password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: '100%', maxWidth: 280 }} />

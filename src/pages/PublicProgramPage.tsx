@@ -18,6 +18,12 @@ interface PublicData {
   matches: PublicMatch[];
   clubName: string;
   logoUrl: string | null;
+  coachNome: string | null;
+  coachTelefono: string | null;
+  viceCoachNome: string | null;
+  viceCoachTelefono: string | null;
+  dirigenteNome: string | null;
+  dirigenteTelefono: string | null;
 }
 
 function weekFromSearchParams(params: URLSearchParams): string {
@@ -63,6 +69,12 @@ export default function PublicProgramPage() {
         matches: (matchesRes.data || []) as PublicMatch[],
         clubName: settingsRow?.club_name || 'SSV Bozen Volley',
         logoUrl: settingsRow?.logo_url || null,
+        coachNome: settingsRow?.coach_nome || null,
+        coachTelefono: settingsRow?.coach_telefono || null,
+        viceCoachNome: settingsRow?.vice_coach_nome || null,
+        viceCoachTelefono: settingsRow?.vice_coach_telefono || null,
+        dirigenteNome: settingsRow?.dirigente_nome || null,
+        dirigenteTelefono: settingsRow?.dirigente_telefono || null,
       });
     }
     load();
@@ -134,7 +146,12 @@ export default function PublicProgramPage() {
               trainings={data.trainings}
               matches={data.matches}
               roster={data.roster}
-              settings={{ club_name: data.clubName, logo_url: data.logoUrl }}
+              settings={{
+                club_name: data.clubName, logo_url: data.logoUrl,
+                coach_nome: data.coachNome, coach_telefono: data.coachTelefono,
+                vice_coach_nome: data.viceCoachNome, vice_coach_telefono: data.viceCoachTelefono,
+                dirigente_nome: data.dirigenteNome, dirigente_telefono: data.dirigenteTelefono,
+              }}
               locatables={data.venues}
             />
           </div>
