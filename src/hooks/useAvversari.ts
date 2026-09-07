@@ -15,15 +15,24 @@ export function useAvversari() {
   });
 }
 
+interface SaveAvversarioInput {
+  id: string | null;
+  nome: string;
+  categoria: string;
+  responsabile: string | null;
+  telefono_responsabile: string | null;
+  email_responsabile: string | null;
+}
+
 export function useSaveAvversario() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, nome, categoria }: { id: string | null; nome: string; categoria: string }) => {
+    mutationFn: async ({ id, ...data }: SaveAvversarioInput) => {
       if (id) {
-        const { error } = await supabase.from('avversari').update({ nome, categoria }).eq('id', id);
+        const { error } = await supabase.from('avversari').update(data).eq('id', id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('avversari').insert({ nome, categoria });
+        const { error } = await supabase.from('avversari').insert(data);
         if (error) throw error;
       }
     },

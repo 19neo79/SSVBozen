@@ -5,7 +5,10 @@ import { useDeleteVenue, useSaveVenue, useVenues } from '../hooks/useVenues';
 import { mapsUrlForVenue } from '../lib/location';
 import type { Avversario, Categoria, Venue } from '../types/database';
 
-const emptyOpponentForm = { nome: '', categoria: 'U14' as Categoria };
+const emptyOpponentForm = {
+  nome: '', categoria: 'U14' as Categoria,
+  responsabile: '', telefono_responsabile: '', email_responsabile: '',
+};
 const emptyVenueForm = { nome: '', indirizzo: '', cap: '', citta: '', provincia: '' };
 
 export default function OpponentsPage() {
@@ -33,7 +36,10 @@ export default function OpponentsPage() {
     setManagingFor(null);
     if (o) {
       setEditingId(o.id);
-      setForm({ nome: o.nome, categoria: o.categoria });
+      setForm({
+        nome: o.nome, categoria: o.categoria,
+        responsabile: o.responsabile || '', telefono_responsabile: o.telefono_responsabile || '', email_responsabile: o.email_responsabile || '',
+      });
     } else {
       setEditingId(null);
       setForm(emptyOpponentForm);
@@ -49,7 +55,14 @@ export default function OpponentsPage() {
   async function handleSave() {
     if (!form.nome.trim()) { showToast('Inserisci il nome della squadra avversaria'); return; }
     try {
-      await saveAvversario.mutateAsync({ id: editingId, nome: form.nome.trim(), categoria: form.categoria });
+      await saveAvversario.mutateAsync({
+        id: editingId,
+        nome: form.nome.trim(),
+        categoria: form.categoria,
+        responsabile: form.responsabile.trim() || null,
+        telefono_responsabile: form.telefono_responsabile.trim() || null,
+        email_responsabile: form.email_responsabile.trim() || null,
+      });
       closeForm();
       showToast('Avversario salvato');
     } catch {
@@ -146,6 +159,11 @@ export default function OpponentsPage() {
               </select>
             </div>
           </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <div className="field"><label>Referente</label><input style={{ width: 180 }} value={form.responsabile} onChange={(e) => setForm({ ...form, responsabile: e.target.value })} /></div>
+            <div className="field"><label>Cellulare</label><input style={{ width: 160 }} value={form.telefono_responsabile} onChange={(e) => setForm({ ...form, telefono_responsabile: e.target.value })} /></div>
+            <div className="field"><label>Email</label><input type="email" style={{ width: 220 }} value={form.email_responsabile} onChange={(e) => setForm({ ...form, email_responsabile: e.target.value })} /></div>
+          </div>
           <div className="settings-actions">
             <button className="btn ghost" onClick={closeForm}>Annulla</button>
             <button className="btn" onClick={handleSave}>Salva</button>
@@ -196,14 +214,27 @@ export default function OpponentsPage() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Nome</th><th>Categoria</th><th>Palestre</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Categoria</th><th>Referente</th><th>Palestre</th><th></th></tr></thead>
             <tbody>
               {sorted.map((o) => {
                 const ownVenues = opponentVenues(o.id);
+                const hasReferente = o.responsabile || o.telefono_responsabile || o.email_responsabile;
                 return (
                   <tr key={o.id}>
                     <td>{o.nome}</td>
                     <td style={{ textAlign: 'center' }}>{o.categoria}</td>
+                    <td>
+                      {hasReferente ? (
+                        <>
+                          {o.responsabile && <div>{o.responsabile}</div>}
+                          <div className="muted" style={{ fontSize: 12.5 }}>
+                            {o.telefono_responsabile && <a href={`tel:${o.telefono_responsabile}`}>{o.telefono_responsabile}</a>}
+                            {o.telefono_responsabile && o.email_responsabile && ' · '}
+                            {o.email_responsabile && <a href={`mailto:${o.email_responsabile}`}>{o.email_responsabile}</a>}
+                          </div>
+                        </>
+                      ) : <span className="muted">—</span>}
+                    </td>
                     <td>{ownVenues.length === 0 ? <span className="muted">nessuna inserita</span> : ownVenues.map((v) => v.nome).join(', ')}</td>
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>

@@ -26,6 +26,9 @@ export interface Avversario {
   id: string;
   nome: string;
   categoria: Categoria;
+  responsabile: string | null;
+  telefono_responsabile: string | null;
+  email_responsabile: string | null;
   created_at: string;
 }
 
