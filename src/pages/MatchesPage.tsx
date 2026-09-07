@@ -79,7 +79,9 @@ export default function MatchesPage() {
     let venue_id: string | null = null;
     let luogo_custom: string | null = null;
     if (usaCampoAvversario) {
-      venue_id = venueSel || null;
+      // Con una sola palestra dell'avversario il campo è precompilato e disabilitato
+      // (non genera un vero onChange), quindi va preso da opponentVenues e non da venueSel.
+      venue_id = opponentVenues.length === 1 ? opponentVenues[0].id : (venueSel || null);
     } else {
       venue_id = venueSel && venueSel !== '__custom__' ? venueSel : null;
       luogo_custom = venueSel === '__custom__' ? venueCustom.trim() : null;
