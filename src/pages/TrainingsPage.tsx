@@ -30,10 +30,11 @@ interface DayState {
   venueSel: string; // venue id, '__custom__', or ''
   custom: string;
   convocati: string[];
+  convocatiOpen: boolean;
 }
 
 function emptyDay(): DayState {
-  return { attivo: true, orario: '18:00–19:30', venueSel: '', custom: '', convocati: [] };
+  return { attivo: true, orario: '18:00–19:30', venueSel: '', custom: '', convocati: [], convocatiOpen: false };
 }
 
 export default function TrainingsPage() {
@@ -57,8 +58,10 @@ export default function TrainingsPage() {
   const [singleVenueSel, setSingleVenueSel] = useState('');
   const [singleCustom, setSingleCustom] = useState('');
   const [singleConvocati, setSingleConvocati] = useState<string[]>([]);
+  const [singleConvocatiOpen, setSingleConvocatiOpen] = useState(false);
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
+  const [openAttendanceIds, setOpenAttendanceIds] = useState<Set<string>>(new Set());
   const [openProgrammati, setOpenProgrammati] = useState(false);
   const [openInCorso, setOpenInCorso] = useState(false);
   const [openPassati, setOpenPassati] = useState(false);
@@ -214,6 +217,15 @@ export default function TrainingsPage() {
     }
   }
 
+  function toggleAttendanceOpen(id: string) {
+    setOpenAttendanceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   function openEditConvocati(t: Training) {
     setEditingConvocatiId(t.id);
     setEditingConvocatiSelection(t.convocati || []);
@@ -234,11 +246,6 @@ export default function TrainingsPage() {
       showToast('Errore nel salvataggio dei convocati');
     }
   }
-
-  const playerLabel = (id: string) => {
-    const p = roster.find((x) => x.id === id);
-    return p ? `${p.cognome} ${p.nome}` : '?';
-  };
 
   const currentWeek = weekRangeFor(todayISO());
   const weekStart = currentWeek[0];
@@ -268,6 +275,7 @@ export default function TrainingsPage() {
       .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
     const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
     const isEditingConvocati = editingConvocatiId === t.id;
+    const isAttendanceOpen = openAttendanceIds.has(t.id);
     return (
       <div className="event" key={t.id}>
         <div className="event-main">
@@ -289,25 +297,29 @@ export default function TrainingsPage() {
             </div>
           ) : (
             <>
-              <div className="event-conv">Convocati: {convocati.length} — {convocati.map(playerLabel).join(', ') || 'nessuno'}</div>
-              <div className="event-conv">Presenti: {presenze.length} / {convocati.length}</div>
-              {convocatiPlayers.length === 0 ? (
-                <div className="attendance-list"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
-              ) : (
-                <div className="attendance-list">
-                  {convocatiPlayers.map((p) => (
-                    <AttendanceRow
-                      key={p.id}
-                      player={p}
-                      presente={presenze.includes(p.id)}
-                      ritardo={(t.ritardi || []).includes(p.id)}
-                      motivo={(t.motivi_assenza || {})[p.id]}
-                      onTogglePresente={(checked) => togglePresenza(t, p.id, checked)}
-                      onToggleRitardo={(checked) => toggleRitardo(t, p.id, checked)}
-                      onSetMotivo={(motivo) => setMotivoAssenza(t, p.id, motivo)}
-                    />
-                  ))}
-                </div>
+              <div className="event-conv">Convocati: {convocati.length} · Presenti: {presenze.length} / {convocati.length}</div>
+              <button type="button" className="btn ghost small" style={{ marginTop: 6 }} onClick={() => toggleAttendanceOpen(t.id)}>
+                {isAttendanceOpen ? 'Nascondi convocati' : 'Convocati'}
+              </button>
+              {isAttendanceOpen && (
+                convocatiPlayers.length === 0 ? (
+                  <div className="attendance-list"><span className="muted">Nessun convocato — imposta prima i convocati.</span></div>
+                ) : (
+                  <div className="attendance-list">
+                    {convocatiPlayers.map((p) => (
+                      <AttendanceRow
+                        key={p.id}
+                        player={p}
+                        presente={presenze.includes(p.id)}
+                        ritardo={(t.ritardi || []).includes(p.id)}
+                        motivo={(t.motivi_assenza || {})[p.id]}
+                        onTogglePresente={(checked) => togglePresenza(t, p.id, checked)}
+                        onToggleRitardo={(checked) => toggleRitardo(t, p.id, checked)}
+                        onSetMotivo={(motivo) => setMotivoAssenza(t, p.id, motivo)}
+                      />
+                    ))}
+                  </div>
+                )
               )}
             </>
           )}
@@ -395,10 +407,16 @@ export default function TrainingsPage() {
                 </div>
                 <div className="field" style={{ marginTop: 10 }}>
                   <div className="row" style={{ alignItems: 'center', gap: 10 }}>
-                    <label style={{ margin: 0 }}>Convocati</label>
-                    <SelectAllButton players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                    <button type="button" className="btn ghost small" onClick={() => setDay(key, { convocatiOpen: !d.convocatiOpen })}>
+                      {d.convocatiOpen ? 'Nascondi convocati' : `Convocati (${d.convocati.length})`}
+                    </button>
+                    {d.convocatiOpen && (
+                      <SelectAllButton players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                    )}
                   </div>
-                  <PlayerChecks players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                  {d.convocatiOpen && (
+                    <PlayerChecks players={roster} selected={d.convocati} onChange={(ids) => setDay(key, { convocati: ids })} />
+                  )}
                 </div>
               </div>
             );
@@ -431,10 +449,16 @@ export default function TrainingsPage() {
           </div>
           <div className="field" style={{ marginTop: 12 }}>
             <div className="row" style={{ alignItems: 'center', gap: 10 }}>
-              <label style={{ margin: 0 }}>Convocati</label>
-              <SelectAllButton players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+              <button type="button" className="btn ghost small" onClick={() => setSingleConvocatiOpen((v) => !v)}>
+                {singleConvocatiOpen ? 'Nascondi convocati' : `Convocati (${singleConvocati.length})`}
+              </button>
+              {singleConvocatiOpen && (
+                <SelectAllButton players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+              )}
             </div>
-            <PlayerChecks players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+            {singleConvocatiOpen && (
+              <PlayerChecks players={roster} selected={singleConvocati} onChange={setSingleConvocati} />
+            )}
           </div>
           <div className="settings-actions">
             <button className="btn" onClick={handleAddSingle}>Aggiungi allenamento</button>
