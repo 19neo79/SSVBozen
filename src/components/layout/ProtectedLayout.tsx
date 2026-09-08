@@ -91,6 +91,10 @@ export function ProtectedLayout() {
       <main>
         <Outlet />
       </main>
+
+      <footer className="app-footer no-print">
+        Creato da <a href="https://www.manuelriccadonna.it" target="_blank" rel="noopener noreferrer">Manuel Riccadonna</a>
+      </footer>
     </div>
   );
 }
