@@ -95,8 +95,8 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
         <div className="foglio-referenti">
           {referenti.map((r) => (
             <div key={r.ruolo}>
-              {r.ruolo}: {r.nome}
-              {r.telefono && <> - Mobile: <a href={`tel:${r.telefono}`}>{r.telefono}</a></>}
+              {r.ruolo}: <strong>{r.nome}</strong>
+              {r.telefono && <> - Mobile: <strong><a href={`tel:${r.telefono}`}>{r.telefono}</a></strong></>}
             </div>
           ))}
         </div>
