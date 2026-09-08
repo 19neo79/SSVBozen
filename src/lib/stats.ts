@@ -1,5 +1,20 @@
 import type { Categoria, Match, Training } from '../types/database';
+import { isGiustificata } from './assenze';
 import { fmtISODate, parseDateLocal, todayISO } from './dates';
+
+/** Penalita' per una presenza in ritardo: vale 75% di una presenza puntuale. */
+const RITARDO_WEIGHT = 0.75;
+
+/**
+ * Punteggio di una singola convocazione per l'indice di affidabilita':
+ * 1 se presente puntuale, RITARDO_WEIGHT se presente in ritardo, 0 se assente
+ * senza motivo giustificato (o senza motivo indicato), null (esclusa dal
+ * calcolo, vero neutro) se assente con motivo giustificato.
+ */
+function reliabilityScoreFor(presente: boolean, ritardo: boolean, motivo: string | undefined): number | null {
+  if (presente) return ritardo ? RITARDO_WEIGHT : 1;
+  return isGiustificata(motivo) ? null : 0;
+}
 
 export interface CategoriaSplit {
   conv: number;
@@ -51,6 +66,7 @@ export interface TeamOverview {
   matchRitardiTotal: number;
   weekdayTraining: Record<number, CategoriaSplit>;
   motivoBreakdown: Record<string, number>;
+  reliabilityScore: number | null;
 }
 
 export interface MonthlyPoint {
@@ -215,9 +231,18 @@ export function computePlayerAttendance(
 
   const totalConv = trainingEvents.length + matchEvents.length;
   const totalPres = trainingPres + matchPres;
-  const weightedConv = trainingEvents.length * 1 + matchEvents.length * 2;
-  const weightedPres = trainingPres * 1 + matchPres * 2;
-  const reliabilityScore = weightedConv > 0 ? Math.round((weightedPres / weightedConv) * 100) : null;
+
+  let relNum = 0;
+  let relDen = 0;
+  trainingEvents.forEach((t) => {
+    const s = reliabilityScoreFor((t.presenze || []).includes(playerId), (t.ritardi || []).includes(playerId), (t.motivi_assenza || {})[playerId]);
+    if (s !== null) { relNum += 1 * s; relDen += 1; }
+  });
+  matchEvents.forEach((m) => {
+    const s = reliabilityScoreFor((m.presenze || []).includes(playerId), (m.ritardi || []).includes(playerId), (m.motivi_assenza || {})[playerId]);
+    if (s !== null) { relNum += 2 * s; relDen += 2; }
+  });
+  const reliabilityScore = relDen > 0 ? Math.round((relNum / relDen) * 100) : null;
 
   return {
     trainingConv: trainingEvents.length,
@@ -286,6 +311,30 @@ export function computeTeamOverview(pastTrainings: Training[], pastMatches: Matc
     });
   });
 
+  let relNum = 0;
+  let relDen = 0;
+  pastTrainings.forEach((t) => {
+    const conv = t.convocati || [];
+    const pres = t.presenze || [];
+    const rit = t.ritardi || [];
+    const motivi = t.motivi_assenza || {};
+    conv.forEach((id) => {
+      const s = reliabilityScoreFor(pres.includes(id), rit.includes(id), motivi[id]);
+      if (s !== null) { relNum += 1 * s; relDen += 1; }
+    });
+  });
+  pastMatches.forEach((m) => {
+    const conv = m.convocati || [];
+    const pres = m.presenze || [];
+    const rit = m.ritardi || [];
+    const motivi = m.motivi_assenza || {};
+    conv.forEach((id) => {
+      const s = reliabilityScoreFor(pres.includes(id), rit.includes(id), motivi[id]);
+      if (s !== null) { relNum += 2 * s; relDen += 2; }
+    });
+  });
+  const reliabilityScore = relDen > 0 ? Math.round((relNum / relDen) * 100) : null;
+
   return {
     trainingsCount: pastTrainings.length,
     matchesCount: pastMatches.length,
@@ -299,6 +348,7 @@ export function computeTeamOverview(pastTrainings: Training[], pastMatches: Matc
     matchRitardiTotal,
     weekdayTraining,
     motivoBreakdown,
+    reliabilityScore,
   };
 }
 

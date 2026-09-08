@@ -344,6 +344,17 @@ function TeamStatsView({
       </div>
 
       <div className="card">
+        <h3>Affidabilità di squadra</h3>
+        <div className="muted" style={{ fontSize: 12.5, marginBottom: 4 }}>
+          Indice pesato: partita conta doppio di un allenamento; un ritardo vale il 75% di una presenza puntuale;
+          un'assenza senza motivo (o non giustificata) vale 0; un'assenza giustificata non viene conteggiata (né a favore né contro).
+        </div>
+        <div className="stat-cards">
+          <RateCard label="Affidabilità di squadra" r={teamOverview.reliabilityScore} />
+        </div>
+      </div>
+
+      <div className="card">
         <h3>Eventi da ricordare</h3>
         <div className="stat-cards">
           <StatCard label="Eventi con presenza 100%" value={perfectCount} />
@@ -444,7 +455,8 @@ function TeamStatsView({
           </div>
         )}
         <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>
-          * Affidabilità: percentuale pesata dove ogni partita conta doppio rispetto a un allenamento.
+          * Affidabilità: indice pesato (partita doppio di un allenamento) dove un ritardo vale il 75% di una presenza,
+          un'assenza senza motivo vale 0 e un'assenza giustificata non viene conteggiata.
         </div>
       </div>
     </>
@@ -482,7 +494,7 @@ function PlayerStatsView({
             r={totalRate}
             sub={delta !== null ? `${delta >= 0 ? '+' : ''}${delta}% vs media squadra` : undefined}
           />
-          <RateCard label="Affidabilità*" r={stats.reliabilityScore} sub="Partite pesate doppio" />
+          <RateCard label="Affidabilità*" r={stats.reliabilityScore} sub="Partite doppio, ritardo 75%, assenze giustificate escluse" />
         </div>
       </div>
 
