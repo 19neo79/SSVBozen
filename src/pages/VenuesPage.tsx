@@ -177,7 +177,7 @@ export default function VenuesPage() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th>Avversario</th><th></th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th>Avversario</th><th></th></tr></thead>
             <tbody>
               {sorted.map((v) => (
                 <tr key={v.id}>
@@ -185,10 +185,12 @@ export default function VenuesPage() {
                   <td className="muted">{v.indirizzo || '—'}</td>
                   <td className="muted">{[v.cap, v.citta, v.provincia].filter(Boolean).join(' ') || '—'}</td>
                   <td className="muted">{avversarioNome(v.avversario_id) || '—'}</td>
-                  <td><a href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer" className="btn ghost small">Apri in Maps</a></td>
                   <td>
-                    <button className="btn ghost small" onClick={() => openForm(v)}>Modifica</button>{' '}
-                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(v.id)}>Elimina</button>
+                    <div className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                      <a href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer" className="btn ghost small">Maps</a>
+                      <button className="btn ghost small" onClick={() => openForm(v)}>Modifica</button>
+                      <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(v.id)}>Elimina</button>
+                    </div>
                   </td>
                 </tr>
               ))}
