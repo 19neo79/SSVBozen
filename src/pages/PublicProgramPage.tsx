@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
-import { todayISO, weekRangeFor, fmtDateShort, parseDateLocal, fmtISODate } from '../lib/dates';
+import { weekRangeFor, fmtDateShort } from '../lib/dates';
 import type {
   PublicMatch,
   PublicRosterBasic,
@@ -29,29 +29,34 @@ interface PublicData {
   dirigenteEmail: string | null;
 }
 
-function weekFromSearchParams(params: URLSearchParams): string {
-  const w = params.get('settimana');
-  return w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : todayISO();
-}
+type LoadState = 'loading' | 'invalid' | 'error' | 'ready';
 
 export default function PublicProgramPage() {
+  const { token } = useParams<{ token: string }>();
+  const [state, setState] = useState<LoadState>('loading');
+  const [weekAnchor, setWeekAnchor] = useState<string | null>(null);
   const [data, setData] = useState<PublicData | null>(null);
-  const [error, setError] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [weekAnchor, setWeekAnchorState] = useState(() => weekFromSearchParams(searchParams));
-
-  function setWeekAnchor(next: string) {
-    setWeekAnchorState(next);
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      p.set('settimana', next);
-      return p;
-    }, { replace: true });
-  }
 
   useEffect(() => {
     let mounted = true;
     async function load() {
+      if (!token) {
+        setState('invalid');
+        return;
+      }
+
+      const linkRes = await supabase.from('public_week_links').select('week_start').eq('id', token).maybeSingle();
+      if (!mounted) return;
+      if (linkRes.error) {
+        setState('error');
+        return;
+      }
+      if (!linkRes.data) {
+        setState('invalid');
+        return;
+      }
+      const weekStart = linkRes.data.week_start as string;
+
       const [rosterRes, venuesRes, trainingsRes, matchesRes, settingsRes] = await Promise.all([
         supabase.from('public_roster_basic').select('*').order('cognome'),
         supabase.from('public_venues_basic').select('*'),
@@ -61,7 +66,7 @@ export default function PublicProgramPage() {
       ]);
       if (!mounted) return;
       if (rosterRes.error || venuesRes.error || trainingsRes.error || matchesRes.error) {
-        setError(true);
+        setState('error');
         return;
       }
       const settingsRow = settingsRes.data as PublicSettingsBasic | null;
@@ -82,14 +87,24 @@ export default function PublicProgramPage() {
         dirigenteTelefono: settingsRow?.dirigente_telefono || null,
         dirigenteEmail: settingsRow?.dirigente_email || null,
       });
+      setWeekAnchor(weekStart);
+      setState('ready');
     }
     load();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [token]);
 
-  if (error) {
+  if (state === 'invalid') {
+    return (
+      <div className="center-page">
+        <div>Questo link non è valido. Chiedi al coach un link aggiornato.</div>
+      </div>
+    );
+  }
+
+  if (state === 'error') {
     return (
       <div className="center-page">
         <div>Impossibile caricare il programma. Riprova più tardi.</div>
@@ -97,18 +112,11 @@ export default function PublicProgramPage() {
     );
   }
 
-  if (!data) {
+  if (state === 'loading' || !data || !weekAnchor) {
     return <div className="center-page">Caricamento…</div>;
   }
 
   const days = weekRangeFor(weekAnchor);
-  const isCurrentWeek = days.includes(todayISO());
-
-  function shiftWeek(deltaDays: number) {
-    const d = parseDateLocal(weekAnchor);
-    d.setDate(d.getDate() + deltaDays);
-    setWeekAnchor(fmtISODate(d));
-  }
 
   return (
     <div style={{ background: 'var(--panna)', minHeight: '100vh' }}>
@@ -132,18 +140,8 @@ export default function PublicProgramPage() {
         </div>
       </header>
       <main>
-        <div className="week-picker no-print">
-          <button className="btn ghost small" onClick={() => shiftWeek(-7)}>← Settimana precedente</button>
-          <div className="week-range">{fmtDateShort(days[0])} — {fmtDateShort(days[6])}</div>
-          <button className="btn ghost small" onClick={() => shiftWeek(7)}>Settimana successiva →</button>
-          {!isCurrentWeek && (
-            <button className="btn small" style={{ marginLeft: 'auto' }} onClick={() => setWeekAnchor(todayISO())}>
-              Torna a questa settimana
-            </button>
-          )}
-        </div>
         <div className="card no-print" style={{ fontSize: 13, color: 'var(--inchiostro-soft)' }}>
-          Questa pagina è pubblica: condividila pure nel gruppo WhatsApp dei genitori.
+          <strong>{fmtDateShort(days[0])} — {fmtDateShort(days[6])}</strong> · Questa pagina è pubblica: condividila pure nel gruppo WhatsApp dei genitori.
         </div>
         <div className="piano-preview">
           <div className="card">

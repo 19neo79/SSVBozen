@@ -6,6 +6,7 @@ import { useVenues } from '../hooks/useVenues';
 import { useTrainings } from '../hooks/useTrainings';
 import { useMatches } from '../hooks/useMatches';
 import { useSettings } from '../hooks/useSettings';
+import { useGetOrCreatePublicWeekLink } from '../hooks/usePublicWeekLink';
 import { FoglioSettimanale } from '../components/FoglioSettimanale';
 import { WeekPicker } from '../components/ui/WeekPicker';
 import { fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
@@ -18,6 +19,7 @@ export default function WeekPlanPage() {
   const { data: trainings = [] } = useTrainings();
   const { data: matches = [] } = useMatches();
   const { data: settings } = useSettings();
+  const getOrCreateLink = useGetOrCreatePublicWeekLink();
 
   const days = weekRangeFor(pianoData);
   const locatables = venues;
@@ -33,17 +35,31 @@ export default function WeekPlanPage() {
     setPianoData(fmtISODate(d));
   }
 
-  function publicLinkForThisWeek(): string {
-    return `${window.location.origin}/programma?settimana=${pianoData}`;
+  async function resolvePublicUrl(): Promise<string> {
+    const token = await getOrCreateLink.mutateAsync(days[0]);
+    return `${window.location.origin}/programma/${token}`;
   }
 
   async function handleCopyPublicLink() {
-    const url = publicLinkForThisWeek();
     try {
-      await navigator.clipboard.writeText(url);
-      showToast('Link copiato negli appunti — incollalo pure su WhatsApp');
+      const url = await resolvePublicUrl();
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copiato negli appunti — incollalo pure su WhatsApp');
+      } catch {
+        window.prompt('Copia questo link:', url);
+      }
     } catch {
-      window.prompt('Copia questo link:', url);
+      showToast('Errore nella generazione del link pubblico');
+    }
+  }
+
+  async function handlePreviewPublicLink() {
+    try {
+      const url = await resolvePublicUrl();
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      showToast('Errore nella generazione del link pubblico');
     }
   }
 
@@ -70,7 +86,7 @@ export default function WeekPlanPage() {
         </div>
         <div className="row" style={{ gap: 8 }}>
           <button className="btn" onClick={handleCopyPublicLink}>Copia link pubblico per questa settimana</button>
-          <a className="btn ghost" href={publicLinkForThisWeek()} target="_blank" rel="noopener noreferrer">Anteprima</a>
+          <button className="btn ghost" onClick={handlePreviewPublicLink}>Anteprima</button>
         </div>
       </div>
 

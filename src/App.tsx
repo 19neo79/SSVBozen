@@ -23,7 +23,8 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/programma" element={<PublicProgramPage />} />
+      <Route path="/programma/:token" element={<PublicProgramPage />} />
+      <Route path="/programma" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={session ? <Navigate to="/app/allenamenti" replace /> : <LoginPage />} />
 
       <Route path="/app" element={session ? <ProtectedLayout /> : <Navigate to="/login" replace />}>
