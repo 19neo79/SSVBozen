@@ -104,9 +104,30 @@ export function rate(pres: number, conv: number): number | null {
   return conv > 0 ? Math.round((pres / conv) * 100) : null;
 }
 
-/** Filtra eventi la cui data e' oggi o nel passato (le presenze future non sono ancora significative). */
-export function pastOnly<T extends { data: string }>(items: T[], today: string = todayISO()): T[] {
-  return items.filter((i) => i.data <= today);
+/** Estrae l'orario di fine da una stringa "HH:MM–HH:MM" (o "HH:MM-HH:MM"), in minuti da mezzanotte. */
+function parseOrarioEndMinutes(orario: string | null | undefined): number | null {
+  if (!orario) return null;
+  const parts = orario.split(/[–-]/).map((s) => s.trim()).filter(Boolean);
+  const end = parts[1] || parts[0];
+  const m = end?.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+/**
+ * Filtra eventi gia' conclusi: giorni precedenti a oggi, oppure oggi ma solo dopo
+ * l'orario di fine dell'evento (le presenze di un allenamento/partita non ancora
+ * terminati non sono ancora significative per le statistiche).
+ */
+export function pastOnly<T extends { data: string; orario?: string | null }>(items: T[], today: string = todayISO()): T[] {
+  return items.filter((i) => {
+    if (i.data < today) return true;
+    if (i.data > today) return false;
+    const endMin = parseOrarioEndMinutes(i.orario);
+    if (endMin === null) return true;
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes() >= endMin;
+  });
 }
 
 const WEEKDAY_LABELS = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
