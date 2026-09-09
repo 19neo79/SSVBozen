@@ -960,6 +960,24 @@ table.matrix tbody tr:nth-child(even) th {
   min-width: 0;
   box-sizing: border-box;
 }
+.stat-card-orange {
+  background: #c96a1c;
+  border-color: #c96a1c;
+}
+.stat-card-orange .stat-value,
+.stat-card-orange .stat-label,
+.stat-card-orange .stat-sub {
+  color: #fff;
+}
+.stat-card-red {
+  background: var(--rosso);
+  border-color: var(--rosso);
+}
+.stat-card-red .stat-value,
+.stat-card-red .stat-label,
+.stat-card-red .stat-sub {
+  color: #fff;
+}
 .stat-value {
   font-family: 'Barlow Condensed';
   font-weight: 800;

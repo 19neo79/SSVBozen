@@ -155,9 +155,9 @@ export default function StatsPage() {
   );
 }
 
-function StatCard({ label, value, sub, valueClass }: { label: string; value: string | number; sub?: string; valueClass?: string }) {
+function StatCard({ label, value, sub, valueClass, cardClass }: { label: string; value: string | number; sub?: string; valueClass?: string; cardClass?: string }) {
   return (
-    <div className="stat-card">
+    <div className={cardClass ? `stat-card ${cardClass}` : 'stat-card'}>
       <div className={valueClass ? `stat-value ${valueClass}` : 'stat-value'}>{value}</div>
       <div className="stat-label">{label}</div>
       {sub && <div className="stat-sub">{sub}</div>}
@@ -499,6 +499,12 @@ function PlayerStatsView({
             label="Ritardi"
             value={stats.trainingRitardi + stats.matchRitardi}
             sub={`${stats.trainingRitardi} allenamenti · ${stats.matchRitardi} partite`}
+            cardClass="stat-card-orange"
+          />
+          <StatCard
+            label="Allenamenti saltati senza giustificazione"
+            value={stats.trainingAssenzeIngiustificate}
+            cardClass="stat-card-red"
           />
         </div>
       </div>

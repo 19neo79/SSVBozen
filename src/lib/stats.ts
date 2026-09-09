@@ -39,6 +39,7 @@ export interface PlayerAttendance {
   totalConv: number;
   totalPres: number;
   totalRitardi: number;
+  trainingAssenzeIngiustificate: number;
   recent: EventOutcome[];
   fullChronology: EventOutcome[];
   currentStreak: number;
@@ -158,6 +159,9 @@ export function computePlayerAttendance(
 
   const trainingPres = trainingEvents.filter((t) => (t.presenze || []).includes(playerId)).length;
   const trainingRitardi = trainingEvents.filter((t) => (t.ritardi || []).includes(playerId)).length;
+  const trainingAssenzeIngiustificate = trainingEvents.filter(
+    (t) => !(t.presenze || []).includes(playerId) && !isGiustificata((t.motivi_assenza || {})[playerId]),
+  ).length;
 
   const matchByCategoria: Record<Categoria, CategoriaSplit> = { U14: { conv: 0, pres: 0 }, U15: { conv: 0, pres: 0 } };
   let matchPres = 0;
@@ -276,6 +280,7 @@ export function computePlayerAttendance(
     totalConv,
     totalPres,
     totalRitardi: trainingRitardi + matchRitardi,
+    trainingAssenzeIngiustificate,
     recent: fullChronology.slice(-10),
     fullChronology,
     currentStreak,
