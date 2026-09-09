@@ -284,10 +284,14 @@ export default function TrainingsPage() {
     const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
     const isEditingConvocati = editingConvocatiId === t.id;
     const isAttendanceOpen = openAttendanceIds.has(t.id);
+    const isSvolto = t.data >= weekStart && t.data <= weekEnd && t.data < today;
     return (
       <div className="event" key={t.id}>
         <div className="event-main">
-          <div className="event-date">{fmtDate(t.data)}</div>
+          <div className="event-date">
+            {fmtDate(t.data)}
+            {isSvolto && <span className="tag-svolto">Svolto</span>}
+          </div>
           <div className="event-detail">
             {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
           </div>

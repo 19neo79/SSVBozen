@@ -521,6 +521,21 @@ tr:last-child td {
   font-family: 'Barlow Condensed';
   font-weight: 700;
   font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tag-svolto {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  line-height: 1.6;
+  color: #fff;
+  background: var(--inchiostro-soft);
+  flex-shrink: 0;
 }
 .event-detail {
   font-size: 13px;
