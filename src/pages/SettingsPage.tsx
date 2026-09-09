@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUi } from '../contexts/UiContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings, useUpdateSettings } from '../hooks/useSettings';
 import { useProfiles, useUpdateProfileRole } from '../hooks/useProfiles';
 import { supabase } from '../lib/supabase';
+import { exportFullBackup, parseBackupFile, restoreFullBackup, type BackupData } from '../lib/backup';
 import type { Ruolo } from '../types/database';
+
+const RESTORE_CONFIRM_PHRASE = 'SOSTITUISCI TUTTO';
 
 const emptyNewUser = { nome: '', email: '', password: '', ruolo: 'allenatore' as Ruolo };
 
@@ -51,6 +54,12 @@ export default function SettingsPage() {
   const [newUser, setNewUser] = useState(emptyNewUser);
   const [creatingUser, setCreatingUser] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  const [exportingBackup, setExportingBackup] = useState(false);
+  const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null);
+  const [restoreConfirmText, setRestoreConfirmText] = useState('');
+  const [restoring, setRestoring] = useState(false);
+  const backupFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) setClubName(settings.club_name || '');
@@ -160,6 +169,61 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleExportBackup() {
+    setExportingBackup(true);
+    try {
+      await exportFullBackup(settings?.club_name || clubName || 'SSV Bozen Volley');
+      showToast('Backup scaricato');
+    } catch {
+      showToast('Errore nella generazione del backup');
+    } finally {
+      setExportingBackup(false);
+    }
+  }
+
+  async function handleBackupFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreConfirmText('');
+    try {
+      const parsed = await parseBackupFile(file);
+      setPendingBackup(parsed);
+    } catch (err) {
+      setPendingBackup(null);
+      showToast(err instanceof Error ? err.message : 'File non valido');
+    }
+    e.target.value = '';
+  }
+
+  function cancelRestore() {
+    setPendingBackup(null);
+    setRestoreConfirmText('');
+  }
+
+  async function handleRestore() {
+    if (!pendingBackup) return;
+    if (restoreConfirmText.trim().toUpperCase() !== RESTORE_CONFIRM_PHRASE) {
+      showToast(`Scrivi esattamente "${RESTORE_CONFIRM_PHRASE}" per confermare`);
+      return;
+    }
+    const ok = await confirm(
+      'Stai per CANCELLARE tutti i dati attuali (rosa, allenamenti, partite, palestre, avversari) e sostituirli con quelli del backup. L\'operazione non è reversibile se non hai un backup più recente. Continuare?'
+    );
+    if (!ok) return;
+    setRestoring(true);
+    try {
+      await restoreFullBackup(pendingBackup);
+      await qc.invalidateQueries();
+      setPendingBackup(null);
+      setRestoreConfirmText('');
+      showToast('Backup ripristinato');
+    } catch (err) {
+      showToast(err instanceof Error ? `Errore nel ripristino: ${err.message}` : 'Errore nel ripristino del backup');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <section>
       <div className="card">
@@ -266,6 +330,63 @@ export default function SettingsPage() {
         <div className="settings-actions">
           <button className="btn" onClick={handleSave}>Salva</button>
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Backup e ripristino</h3>
+        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          Il backup include rosa, allenamenti, partite, palestre, avversari, default ricorrenti e impostazioni società
+          (non include utenti/ruoli, che restano invariati).
+        </div>
+        <div className="settings-actions" style={{ justifyContent: 'flex-start', marginBottom: 20 }}>
+          <button className="btn ghost" onClick={handleExportBackup} disabled={exportingBackup}>
+            {exportingBackup ? 'Preparazione…' : 'Scarica backup completo (.json)'}
+          </button>
+        </div>
+
+        <h4 style={{ margin: '0 0 8px' }}>Ripristina da un backup</h4>
+        <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+          Attenzione: il ripristino <strong>cancella tutti i dati attuali</strong> (rosa, allenamenti, partite, palestre,
+          avversari) e li sostituisce con quelli del file scelto. Non è reversibile, a meno di avere un backup più
+          recente. Ti consigliamo di scaricare un backup aggiornato prima di procedere.
+        </div>
+        <input ref={backupFileRef} type="file" accept="application/json,.json" onChange={handleBackupFileChange} />
+
+        {pendingBackup && (
+          <div className="card" style={{ background: 'var(--panna)', borderStyle: 'dashed', marginTop: 14 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              Backup di {pendingBackup.clubName || 'società sconosciuta'}
+              {pendingBackup.exportedAt && ` — esportato il ${new Date(pendingBackup.exportedAt).toLocaleDateString('it-IT')}`}
+            </div>
+            <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+              Contiene: {pendingBackup.tables.roster?.length ?? 0} giocatori,{' '}
+              {pendingBackup.tables.trainings?.length ?? 0} allenamenti,{' '}
+              {pendingBackup.tables.matches?.length ?? 0} partite,{' '}
+              {pendingBackup.tables.venues?.length ?? 0} palestre,{' '}
+              {pendingBackup.tables.avversari?.length ?? 0} avversari.
+            </div>
+            <div className="field" style={{ marginBottom: 12 }}>
+              <label>Per confermare, scrivi esattamente: <code>{RESTORE_CONFIRM_PHRASE}</code></label>
+              <input
+                value={restoreConfirmText}
+                onChange={(e) => setRestoreConfirmText(e.target.value)}
+                style={{ width: '100%', maxWidth: 280 }}
+                placeholder={RESTORE_CONFIRM_PHRASE}
+              />
+            </div>
+            <div className="settings-actions">
+              <button className="btn ghost" onClick={cancelRestore} disabled={restoring}>Annulla</button>
+              <button
+                className="btn"
+                style={{ background: 'var(--rosso-scuro)' }}
+                onClick={handleRestore}
+                disabled={restoring || restoreConfirmText.trim().toUpperCase() !== RESTORE_CONFIRM_PHRASE}
+              >
+                {restoring ? 'Ripristino in corso…' : 'Cancella tutto e ripristina questo backup'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
