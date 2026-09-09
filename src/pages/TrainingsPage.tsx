@@ -41,6 +41,7 @@ export default function TrainingsPage() {
   const { showToast, confirm } = useUi();
   const { data: roster = [] } = useRoster();
   const { data: venues = [] } = useVenues();
+  const trainingVenues = venues.filter((v) => (v.provincia || '').toUpperCase() === 'BZ');
   const { data: trainings = [] } = useTrainings();
   const { data: recurringDefaults } = useRecurringDefaults();
   const saveDefaults = useSaveRecurringDefaults();
@@ -469,7 +470,7 @@ export default function TrainingsPage() {
                     <label>Palestra</label>
                     <select style={{ width: 200 }} value={d.venueSel} onChange={(e) => setDay(key, { venueSel: e.target.value })} disabled={!d.attivo}>
                       <option value="">— scegli palestra —</option>
-                      {venues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                      {trainingVenues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
                       <option value="__custom__">Altro (inserisci manualmente)</option>
                     </select>
                   </div>
@@ -514,7 +515,7 @@ export default function TrainingsPage() {
               <label>Palestra</label>
               <select style={{ width: 200 }} value={singleVenueSel} onChange={(e) => setSingleVenueSel(e.target.value)}>
                 <option value="">— scegli palestra —</option>
-                {venues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                {trainingVenues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
                 <option value="__custom__">Altro (inserisci manualmente)</option>
               </select>
             </div>
