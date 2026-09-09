@@ -270,7 +270,9 @@ export default function TrainingsPage() {
       if (!map.has(wk)) map.set(wk, []);
       map.get(wk)!.push(t);
     }
-    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    return Array.from(map.entries())
+      .map(([wk, list]) => [wk, [...list].sort((a, b) => a.data.localeCompare(b.data))] as [string, Training[]])
+      .sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
   function togglePassatiWeek(weekStartKey: string) {
