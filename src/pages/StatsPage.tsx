@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react';
 import { useRoster } from '../hooks/useRoster';
 import { useTrainings } from '../hooks/useTrainings';
 import { useMatches } from '../hooks/useMatches';
+import { useVenues } from '../hooks/useVenues';
+import { useSettings } from '../hooks/useSettings';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
 import { MOTIVI_ASSENZA } from '../lib/assenze';
 import { fmtDateShort, todayISO } from '../lib/dates';
+import { exportStatsToExcel } from '../lib/excelExport';
 import {
   buildEventSummaries,
   computePlayerAttendance,
@@ -32,6 +35,8 @@ export default function StatsPage() {
   const { data: roster = [] } = useRoster();
   const { data: trainings = [] } = useTrainings();
   const { data: matches = [] } = useMatches();
+  const { data: venues = [] } = useVenues();
+  const { data: settings } = useSettings();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const today = todayISO();
@@ -99,8 +104,29 @@ export default function StatsPage() {
   const selectedPlayer = selectedId ? players.find((p) => p.id === selectedId) || null : null;
   const selectedStats = selectedId ? playerStats.get(selectedId) || null : null;
 
+  async function handleExportExcel() {
+    await exportStatsToExcel({
+      clubName: settings?.club_name || 'SSV Bozen Volley',
+      players,
+      playerStats,
+      teamOverview,
+      pastTrainings,
+      pastMatches,
+      venues,
+      teamTrainingRate,
+      teamMatchRate,
+      teamTotalRate,
+      perEventAvg,
+      certCounts,
+      fedeltaCount,
+    });
+  }
+
   return (
     <section>
+      <div className="row no-print" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button className="btn ghost small" onClick={handleExportExcel}>Esporta Excel (squadra + giocatori)</button>
+      </div>
       <div className="stats-layout">
         <div className="stats-sidebar">
           <button
