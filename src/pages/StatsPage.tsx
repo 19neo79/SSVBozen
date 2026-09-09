@@ -495,6 +495,11 @@ function PlayerStatsView({
             sub={delta !== null ? `${delta >= 0 ? '+' : ''}${delta}% vs media squadra` : undefined}
           />
           <RateCard label="Affidabilità*" r={stats.reliabilityScore} sub="Partite doppio, ritardo 75%, assenze giustificate escluse" />
+          <StatCard
+            label="Ritardi"
+            value={stats.trainingRitardi + stats.matchRitardi}
+            sub={`${stats.trainingRitardi} allenamenti · ${stats.matchRitardi} partite`}
+          />
         </div>
       </div>
 
