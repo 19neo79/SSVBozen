@@ -18,6 +18,7 @@ export interface FoglioMatch {
   venue_id: string | null;
   luogo_custom: string | null;
   convocati: string[];
+  amichevole?: boolean;
 }
 
 export interface FoglioPlayer {
@@ -130,7 +131,11 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
                 const loc = resolveLocation(m.venue_id, m.luogo_custom, locatables);
                 return (
                   <th className="ev-match" key={`m-${i}`}>
-                    {dayLabelShort(m.data)} · U{(m.categoria || 'U14').slice(-2)}
+                    {dayLabelShort(m.data)}
+                    <span className="th-tags">
+                      <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
+                      {m.amichevole && <span className="tag-svolto">Amichevole</span>}
+                    </span>
                     <span className="sub">{m.orario} · {m.casa_trasferta}</span>
                     <span className="sub">vs {m.avversario}</span>
                     <span className="sub">

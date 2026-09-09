@@ -831,6 +831,23 @@ table.matrix thead th .sub {
   color: var(--inchiostro-soft);
   font-size: 10.5px;
 }
+.th-tags {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 3px 0;
+}
+.th-tags .tag-categoria,
+.th-tags .tag-svolto {
+  font-size: 9.5px;
+  padding: 1px 6px;
+}
+.tag-categoria,
+.tag-svolto {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 table.matrix thead th .sub a.maps-link {
   color: var(--blu);
   font-weight: 600;
