@@ -77,6 +77,7 @@ export interface Match {
   presenze: string[];
   ritardi: string[];
   motivi_assenza: Record<string, string>;
+  amichevole: boolean;
   created_at: string;
 }
 

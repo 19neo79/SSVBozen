@@ -56,6 +56,7 @@ export default function MatchesPage() {
   const [avvCustom, setAvvCustom] = useState('');
   const [venueSel, setVenueSel] = useState('');
   const [venueCustom, setVenueCustom] = useState('');
+  const [amichevole, setAmichevole] = useState(false);
   const [convocati, setConvocati] = useState<string[]>(roster.map((p) => p.id));
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
@@ -96,13 +97,14 @@ export default function MatchesPage() {
       await addMatch.mutateAsync({
         data, orario, casa_trasferta: casaTrasferta, categoria,
         avversario: avversarioNome, avversario_id: avversarioId,
-        venue_id, luogo_custom, convocati, presenze: [],
+        venue_id, luogo_custom, convocati, presenze: [], amichevole,
       });
       setOrario('10:00');
       setAvvSel('');
       setAvvCustom('');
       setVenueSel('');
       setVenueCustom('');
+      setAmichevole(false);
       showToast('Partita aggiunta');
     } catch {
       showToast('Errore nel salvataggio della partita');
@@ -266,7 +268,7 @@ export default function MatchesPage() {
       </div>
 
       <div className="card">
-        <h3>Nuovo impegno di weekend</h3>
+        <h3>Nuova partita</h3>
         <div className="row">
           <div className="field"><label>Data</label><input type="date" value={data} onChange={(e) => setData(e.target.value)} /></div>
           <div className="field">
@@ -287,6 +289,10 @@ export default function MatchesPage() {
               <option value="U15">Under 15</option>
             </select>
           </div>
+          <label className="chk" style={{ alignSelf: 'flex-end', marginBottom: 2 }}>
+            <input type="checkbox" checked={amichevole} onChange={(e) => setAmichevole(e.target.checked)} />
+            Amichevole
+          </label>
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <div className="field" style={{ flex: 1, minWidth: 200 }}>
@@ -367,7 +373,10 @@ export default function MatchesPage() {
             return (
               <div className="event match" key={m.id}>
                 <div className="event-main">
-                  <div className="event-date">{fmtDate(m.data)} — Under {(m.categoria || 'U14').slice(-2)}</div>
+                  <div className="event-date">
+                    {fmtDate(m.data)} — Under {(m.categoria || 'U14').slice(-2)}
+                    {m.amichevole && <span className="tag-svolto">Amichevole</span>}
+                  </div>
                   <div className="event-detail">
                     {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
                     {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}

@@ -59,7 +59,7 @@ export function ProtectedLayout() {
           Allenamenti
         </NavLink>
         <NavLink to="/app/weekend" className={({ isActive }) => (isActive ? 'active' : '')}>
-          Weekend
+          Partite
         </NavLink>
         <NavLink to="/app/piano" className={({ isActive }) => (isActive ? 'active' : '')}>
           Piano settimanale
