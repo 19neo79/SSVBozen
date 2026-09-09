@@ -499,6 +499,20 @@ tr:last-child td {
 .section-chevron.open {
   transform: rotate(-90deg);
 }
+.week-subsection {
+  border-left: 3px solid var(--linea);
+  padding-left: 12px;
+}
+.week-subsection + .week-subsection {
+  margin-top: 14px;
+}
+.week-subsection .section-toggle-title {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+.week-subsection .event-list {
+  margin-top: 12px;
+}
 .event {
   background: #fff;
   border: 1px solid var(--linea);

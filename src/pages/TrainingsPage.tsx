@@ -14,7 +14,7 @@ import { TimeRangeInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
 import { AttendanceRow } from '../components/ui/AttendanceRow';
 import { WeekPicker } from '../components/ui/WeekPicker';
-import { fmtDate, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
+import { fmtDate, fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
 import type { Giorno, Training } from '../types/database';
 
@@ -65,6 +65,7 @@ export default function TrainingsPage() {
   const [openProgrammati, setOpenProgrammati] = useState(false);
   const [openInCorso, setOpenInCorso] = useState(false);
   const [openPassati, setOpenPassati] = useState(false);
+  const [openPassatiWeeks, setOpenPassatiWeeks] = useState<Set<string>>(new Set());
   const programmatiInitialized = useRef(false);
   const inCorsoInitialized = useRef(false);
 
@@ -262,6 +263,25 @@ export default function TrainingsPage() {
     });
   const programmatiList = trainings.filter((t) => t.data > weekEnd).sort((a, b) => a.data.localeCompare(b.data));
 
+  const passatiPerSettimana = (() => {
+    const map = new Map<string, Training[]>();
+    for (const t of passatiList) {
+      const wk = weekRangeFor(t.data)[0];
+      if (!map.has(wk)) map.set(wk, []);
+      map.get(wk)!.push(t);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
+
+  function togglePassatiWeek(weekStartKey: string) {
+    setOpenPassatiWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(weekStartKey)) next.delete(weekStartKey);
+      else next.add(weekStartKey);
+      return next;
+    });
+  }
+
   useEffect(() => {
     if (programmatiInitialized.current || trainings.length === 0) return;
     programmatiInitialized.current = true;
@@ -364,6 +384,47 @@ export default function TrainingsPage() {
         {open && (
           <div className="event-list">
             {list.length === 0 ? <div className="empty">{emptyText}</div> : list.map(renderTraining)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderPassatiSection() {
+    return (
+      <div className="card">
+        <button type="button" className="section-toggle" onClick={() => setOpenPassati((v) => !v)} aria-expanded={openPassati}>
+          <span className="section-toggle-title">
+            Allenamenti passati <span className="section-badge">{passatiList.length}</span>
+          </span>
+          <span className={`section-chevron${openPassati ? ' open' : ''}`}>›</span>
+        </button>
+        {openPassati && (
+          <div className="event-list">
+            {passatiPerSettimana.length === 0 ? (
+              <div className="empty">Nessun allenamento passato.</div>
+            ) : (
+              passatiPerSettimana.map(([weekStartKey, list]) => {
+                const weekEndKey = weekRangeFor(weekStartKey)[6];
+                const isOpen = openPassatiWeeks.has(weekStartKey);
+                return (
+                  <div className="week-subsection" key={weekStartKey}>
+                    <button
+                      type="button"
+                      className="section-toggle"
+                      onClick={() => togglePassatiWeek(weekStartKey)}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="section-toggle-title">
+                        {fmtDateShort(weekStartKey)} – {fmtDateShort(weekEndKey)} <span className="section-badge">{list.length}</span>
+                      </span>
+                      <span className={`section-chevron${isOpen ? ' open' : ''}`}>›</span>
+                    </button>
+                    {isOpen && <div className="event-list">{list.map(renderTraining)}</div>}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -479,7 +540,7 @@ export default function TrainingsPage() {
 
       {renderSection('Allenamenti programmati', programmatiList, openProgrammati, () => setOpenProgrammati((v) => !v), 'Nessun allenamento programmato oltre questa settimana.')}
       {renderSection('Allenamenti in corso', inCorsoList, openInCorso, () => setOpenInCorso((v) => !v), 'Nessun allenamento questa settimana.')}
-      {renderSection('Allenamenti passati', passatiList, openPassati, () => setOpenPassati((v) => !v), 'Nessun allenamento passato.')}
+      {renderPassatiSection()}
     </section>
   );
 }
