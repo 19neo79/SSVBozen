@@ -374,7 +374,8 @@ export default function MatchesPage() {
               <div className="event match" key={m.id}>
                 <div className="event-main">
                   <div className="event-date">
-                    {fmtDate(m.data)} — Under {(m.categoria || 'U14').slice(-2)}
+                    {fmtDate(m.data)}
+                    <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
                     {m.amichevole && <span className="tag-svolto">Amichevole</span>}
                   </div>
                   <div className="event-detail">
