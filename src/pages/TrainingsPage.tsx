@@ -247,11 +247,19 @@ export default function TrainingsPage() {
     }
   }
 
-  const currentWeek = weekRangeFor(todayISO());
+  const today = todayISO();
+  const currentWeek = weekRangeFor(today);
   const weekStart = currentWeek[0];
   const weekEnd = currentWeek[6];
   const passatiList = trainings.filter((t) => t.data < weekStart).sort((a, b) => b.data.localeCompare(a.data));
-  const inCorsoList = trainings.filter((t) => t.data >= weekStart && t.data <= weekEnd).sort((a, b) => a.data.localeCompare(b.data));
+  const inCorsoList = trainings
+    .filter((t) => t.data >= weekStart && t.data <= weekEnd)
+    .sort((a, b) => {
+      const aPast = a.data < today ? 1 : 0;
+      const bPast = b.data < today ? 1 : 0;
+      if (aPast !== bPast) return aPast - bPast;
+      return a.data.localeCompare(b.data);
+    });
   const programmatiList = trainings.filter((t) => t.data > weekEnd).sort((a, b) => a.data.localeCompare(b.data));
 
   useEffect(() => {
