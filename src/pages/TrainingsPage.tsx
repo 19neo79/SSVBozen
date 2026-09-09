@@ -303,7 +303,7 @@ export default function TrainingsPage() {
     const convocatiPlayers = convocati
       .map((id) => roster.find((p) => p.id === id))
       .filter((p): p is NonNullable<typeof p> => !!p)
-      .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+      .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
     const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
     const isEditingConvocati = editingConvocatiId === t.id;
     const isAttendanceOpen = openAttendanceIds.has(t.id);

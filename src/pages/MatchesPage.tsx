@@ -367,7 +367,7 @@ export default function MatchesPage() {
             const convocatiPlayers = (m.convocati || [])
               .map((id) => roster.find((p) => p.id === id))
               .filter((p): p is NonNullable<typeof p> => !!p)
-              .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99));
+              .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
             const loc = resolveLocation(m.venue_id, m.luogo_custom, venues);
             const isEditingConvocati = editingConvocatiId === m.id;
             return (
