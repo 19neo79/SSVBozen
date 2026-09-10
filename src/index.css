@@ -611,6 +611,18 @@ tr:last-child td {
   padding: 8px 10px;
   background: #fdfcf9;
 }
+.attendance-row.is-presente {
+  background: #e9f6ec;
+  border-color: #b7ddc0;
+}
+.attendance-row.is-assente-giustificata {
+  background: #faf0dc;
+  border-color: #e8c98a;
+}
+.attendance-row.is-assente-non-giustificata {
+  background: #fbe7e9;
+  border-color: #eeb3ba;
+}
 .attendance-name {
   display: flex;
   align-items: center;

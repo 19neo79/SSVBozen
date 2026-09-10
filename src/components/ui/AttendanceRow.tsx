@@ -1,5 +1,5 @@
 import { CategoriaTag } from './CategoriaTag';
-import { MOTIVI_ASSENZA } from '../../lib/assenze';
+import { isGiustificata, MOTIVI_ASSENZA } from '../../lib/assenze';
 import type { RosterPlayer } from '../../types/database';
 
 export type AttendanceState = 'presente' | 'assente' | 'unset';
@@ -17,8 +17,13 @@ interface AttendanceRowProps {
 export function AttendanceRow({
   player, state, ritardo, motivo, onSetState, onToggleRitardo, onSetMotivo,
 }: AttendanceRowProps) {
+  const stateClass = state === 'presente'
+    ? 'is-presente'
+    : state === 'assente'
+      ? (isGiustificata(motivo) ? 'is-assente-giustificata' : 'is-assente-non-giustificata')
+      : '';
   return (
-    <div className="attendance-row">
+    <div className={`attendance-row${stateClass ? ` ${stateClass}` : ''}`}>
       <div className="attendance-name">
         {player.numero ?? ''} {player.cognome} {player.nome}
         <CategoriaTag dataNascita={player.data_nascita} soloU15={player.solo_u15} />
