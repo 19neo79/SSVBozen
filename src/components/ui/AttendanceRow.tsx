@@ -2,18 +2,20 @@ import { CategoriaTag } from './CategoriaTag';
 import { MOTIVI_ASSENZA } from '../../lib/assenze';
 import type { RosterPlayer } from '../../types/database';
 
+export type AttendanceState = 'presente' | 'assente' | 'unset';
+
 interface AttendanceRowProps {
   player: RosterPlayer;
-  presente: boolean;
+  state: AttendanceState;
   ritardo: boolean;
   motivo: string | undefined;
-  onTogglePresente: (checked: boolean) => void;
+  onSetState: (state: AttendanceState) => void;
   onToggleRitardo: (checked: boolean) => void;
   onSetMotivo: (motivo: string) => void;
 }
 
 export function AttendanceRow({
-  player, presente, ritardo, motivo, onTogglePresente, onToggleRitardo, onSetMotivo,
+  player, state, ritardo, motivo, onSetState, onToggleRitardo, onSetMotivo,
 }: AttendanceRowProps) {
   return (
     <div className="attendance-row">
@@ -22,15 +24,33 @@ export function AttendanceRow({
         <CategoriaTag dataNascita={player.data_nascita} soloU15={player.solo_u15} />
       </div>
       <div className="attendance-controls">
-        <label className="chk small">
-          <input type="checkbox" checked={presente} onChange={(e) => onTogglePresente(e.target.checked)} />
-          Presente
-        </label>
-        <label className={`chk small${presente ? '' : ' disabled'}`}>
-          <input type="checkbox" checked={ritardo} disabled={!presente} onChange={(e) => onToggleRitardo(e.target.checked)} />
-          Ritardo
-        </label>
-        {!presente && (
+        {state !== 'assente' && (
+          <label className="chk small">
+            <input
+              type="checkbox"
+              checked={state === 'presente'}
+              onChange={(e) => onSetState(e.target.checked ? 'presente' : 'unset')}
+            />
+            Presente
+          </label>
+        )}
+        {state !== 'presente' && (
+          <label className="chk small">
+            <input
+              type="checkbox"
+              checked={state === 'assente'}
+              onChange={(e) => onSetState(e.target.checked ? 'assente' : 'unset')}
+            />
+            Assente
+          </label>
+        )}
+        {state === 'presente' && (
+          <label className="chk small">
+            <input type="checkbox" checked={ritardo} onChange={(e) => onToggleRitardo(e.target.checked)} />
+            Ritardo
+          </label>
+        )}
+        {state === 'assente' && (
           <select className="attendance-motivo" value={motivo || ''} onChange={(e) => onSetMotivo(e.target.value)}>
             <option value="">Motivo assenza…</option>
             {MOTIVI_ASSENZA.map((m) => (

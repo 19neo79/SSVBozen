@@ -60,6 +60,7 @@ export interface Training {
   presenze: string[];
   ritardi: string[];
   motivi_assenza: Record<string, string>;
+  assenti_confermati: string[];
   created_at: string;
 }
 
@@ -77,6 +78,7 @@ export interface Match {
   presenze: string[];
   ritardi: string[];
   motivi_assenza: Record<string, string>;
+  assenti_confermati: string[];
   amichevole: boolean;
   created_at: string;
 }

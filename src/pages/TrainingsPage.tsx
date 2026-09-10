@@ -12,7 +12,7 @@ import {
 import { useRecurringDefaults, useSaveRecurringDefaults } from '../hooks/useRecurringDefaults';
 import { TimeRangeInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
-import { AttendanceRow } from '../components/ui/AttendanceRow';
+import { AttendanceRow, type AttendanceState } from '../components/ui/AttendanceRow';
 import { WeekPicker } from '../components/ui/WeekPicker';
 import { fmtDate, fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
@@ -171,16 +171,32 @@ export default function TrainingsPage() {
     }
   }
 
-  async function togglePresenza(t: Training, playerId: string, checked: boolean) {
-    const presenze = checked ? [...(t.presenze || []), playerId] : (t.presenze || []).filter((id) => id !== playerId);
-    const data: Partial<Training> = { presenze };
-    if (!checked) {
-      data.ritardi = (t.ritardi || []).filter((id) => id !== playerId);
-    } else {
-      const motivi = { ...(t.motivi_assenza || {}) };
+  async function setAttendanceState(t: Training, playerId: string, state: AttendanceState) {
+    const presenze = new Set(t.presenze || []);
+    const assentiConfermati = new Set(t.assenti_confermati || []);
+    const ritardi = new Set(t.ritardi || []);
+    const motivi = { ...(t.motivi_assenza || {}) };
+
+    presenze.delete(playerId);
+    assentiConfermati.delete(playerId);
+
+    if (state === 'presente') {
+      presenze.add(playerId);
       delete motivi[playerId];
-      data.motivi_assenza = motivi;
+    } else if (state === 'assente') {
+      assentiConfermati.add(playerId);
+      ritardi.delete(playerId);
+    } else {
+      ritardi.delete(playerId);
+      delete motivi[playerId];
     }
+
+    const data: Partial<Training> = {
+      presenze: Array.from(presenze),
+      assenti_confermati: Array.from(assentiConfermati),
+      ritardi: Array.from(ritardi),
+      motivi_assenza: motivi,
+    };
     try {
       await updateTraining.mutateAsync({ id: t.id, data });
     } catch {
@@ -240,8 +256,9 @@ export default function TrainingsPage() {
 
   async function saveEditConvocati(t: Training) {
     const presenze = (t.presenze || []).filter((id) => editingConvocatiSelection.includes(id));
+    const assenti_confermati = (t.assenti_confermati || []).filter((id) => editingConvocatiSelection.includes(id));
     try {
-      await updateTraining.mutateAsync({ id: t.id, data: { convocati: editingConvocatiSelection, presenze } });
+      await updateTraining.mutateAsync({ id: t.id, data: { convocati: editingConvocatiSelection, presenze, assenti_confermati } });
       closeEditConvocati();
       showToast('Convocati aggiornati');
     } catch {
@@ -345,10 +362,10 @@ export default function TrainingsPage() {
                       <AttendanceRow
                         key={p.id}
                         player={p}
-                        presente={presenze.includes(p.id)}
+                        state={presenze.includes(p.id) ? 'presente' : (t.assenti_confermati || []).includes(p.id) ? 'assente' : 'unset'}
                         ritardo={(t.ritardi || []).includes(p.id)}
                         motivo={(t.motivi_assenza || {})[p.id]}
-                        onTogglePresente={(checked) => togglePresenza(t, p.id, checked)}
+                        onSetState={(state) => setAttendanceState(t, p.id, state)}
                         onToggleRitardo={(checked) => toggleRitardo(t, p.id, checked)}
                         onSetMotivo={(motivo) => setMotivoAssenza(t, p.id, motivo)}
                       />

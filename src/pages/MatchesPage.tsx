@@ -12,7 +12,7 @@ import {
 } from '../hooks/useMatches';
 import { TimeSingleInput } from '../components/ui/TimeInputs';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
-import { AttendanceRow } from '../components/ui/AttendanceRow';
+import { AttendanceRow, type AttendanceState } from '../components/ui/AttendanceRow';
 import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
@@ -111,16 +111,32 @@ export default function MatchesPage() {
     }
   }
 
-  async function togglePresenza(m: Match, playerId: string, checked: boolean) {
-    const presenze = checked ? [...(m.presenze || []), playerId] : (m.presenze || []).filter((id) => id !== playerId);
-    const data: Partial<Match> = { presenze };
-    if (!checked) {
-      data.ritardi = (m.ritardi || []).filter((id) => id !== playerId);
-    } else {
-      const motivi = { ...(m.motivi_assenza || {}) };
+  async function setAttendanceState(m: Match, playerId: string, state: AttendanceState) {
+    const presenze = new Set(m.presenze || []);
+    const assentiConfermati = new Set(m.assenti_confermati || []);
+    const ritardi = new Set(m.ritardi || []);
+    const motivi = { ...(m.motivi_assenza || {}) };
+
+    presenze.delete(playerId);
+    assentiConfermati.delete(playerId);
+
+    if (state === 'presente') {
+      presenze.add(playerId);
       delete motivi[playerId];
-      data.motivi_assenza = motivi;
+    } else if (state === 'assente') {
+      assentiConfermati.add(playerId);
+      ritardi.delete(playerId);
+    } else {
+      ritardi.delete(playerId);
+      delete motivi[playerId];
     }
+
+    const data: Partial<Match> = {
+      presenze: Array.from(presenze),
+      assenti_confermati: Array.from(assentiConfermati),
+      ritardi: Array.from(ritardi),
+      motivi_assenza: motivi,
+    };
     try {
       await updateMatch.mutateAsync({ id: m.id, data });
     } catch {
@@ -171,8 +187,9 @@ export default function MatchesPage() {
 
   async function saveEditConvocati(m: Match) {
     const presenze = (m.presenze || []).filter((id) => editingConvocatiSelection.includes(id));
+    const assenti_confermati = (m.assenti_confermati || []).filter((id) => editingConvocatiSelection.includes(id));
     try {
-      await updateMatch.mutateAsync({ id: m.id, data: { convocati: editingConvocatiSelection, presenze } });
+      await updateMatch.mutateAsync({ id: m.id, data: { convocati: editingConvocatiSelection, presenze, assenti_confermati } });
       closeEditConvocati();
       showToast('Convocati aggiornati');
     } catch {
@@ -411,10 +428,10 @@ export default function MatchesPage() {
                             <AttendanceRow
                               key={p.id}
                               player={p}
-                              presente={presenze.includes(p.id)}
+                              state={presenze.includes(p.id) ? 'presente' : (m.assenti_confermati || []).includes(p.id) ? 'assente' : 'unset'}
                               ritardo={(m.ritardi || []).includes(p.id)}
                               motivo={(m.motivi_assenza || {})[p.id]}
-                              onTogglePresente={(checked) => togglePresenza(m, p.id, checked)}
+                              onSetState={(state) => setAttendanceState(m, p.id, state)}
                               onToggleRitardo={(checked) => toggleRitardo(m, p.id, checked)}
                               onSetMotivo={(motivo) => setMotivoAssenza(m, p.id, motivo)}
                             />
