@@ -7,7 +7,7 @@ import { useSettings } from '../hooks/useSettings';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
-import { MOTIVI_ASSENZA } from '../lib/assenze';
+import { isGiustificata, MOTIVI_ASSENZA } from '../lib/assenze';
 import { fmtDateShort, todayISO } from '../lib/dates';
 import { exportStatsToExcel } from '../lib/excelExport';
 import {
@@ -266,7 +266,7 @@ function MonthHeatmap({ chronology, monthKey }: { chronology: EventOutcome[]; mo
     const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const e = byDate.get(iso);
     let status = 'none';
-    if (e) status = e.ritardo ? 'ritardo' : e.presente ? 'presente' : 'assente';
+    if (e) status = e.presente ? 'presente' : isGiustificata(e.motivo) ? 'assente-giustificata' : 'assente-non-giustificata';
     cells.push({ day: d, status });
   }
   return (
@@ -281,8 +281,8 @@ function MonthHeatmap({ chronology, monthKey }: { chronology: EventOutcome[]; mo
       </div>
       <div className="heatmap-legend">
         <span><i className="heatmap-swatch heatmap-presente" /> Presente</span>
-        <span><i className="heatmap-swatch heatmap-ritardo" /> Ritardo</span>
-        <span><i className="heatmap-swatch heatmap-assente" /> Assente</span>
+        <span><i className="heatmap-swatch heatmap-assente-giustificata" /> Assente giustificata</span>
+        <span><i className="heatmap-swatch heatmap-assente-non-giustificata" /> Assente non giustificata</span>
         <span><i className="heatmap-swatch heatmap-none" /> Nessun evento</span>
       </div>
     </div>

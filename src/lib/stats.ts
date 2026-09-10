@@ -26,6 +26,7 @@ export interface EventOutcome {
   type: 'training' | 'match';
   presente: boolean;
   ritardo: boolean;
+  motivo?: string;
 }
 
 export interface PlayerAttendance {
@@ -183,12 +184,14 @@ export function computePlayerAttendance(
       type: 'training' as const,
       presente: (t.presenze || []).includes(playerId),
       ritardo: (t.ritardi || []).includes(playerId),
+      motivo: (t.motivi_assenza || {})[playerId],
     })),
     ...matchEvents.map((m) => ({
       data: m.data,
       type: 'match' as const,
       presente: (m.presenze || []).includes(playerId),
       ritardo: (m.ritardi || []).includes(playerId),
+      motivo: (m.motivi_assenza || {})[playerId],
     })),
   ].sort((a, b) => a.data.localeCompare(b.data));
 

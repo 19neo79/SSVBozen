@@ -1179,11 +1179,11 @@ table.matrix tbody tr:nth-child(even) th {
   background: #1a7a34;
   color: #fff;
 }
-.heatmap-ritardo {
+.heatmap-assente-giustificata {
   background: #a86a00;
   color: #fff;
 }
-.heatmap-assente {
+.heatmap-assente-non-giustificata {
   background: var(--rosso);
   color: #fff;
 }
