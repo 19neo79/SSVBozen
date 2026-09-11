@@ -118,6 +118,11 @@ export default function PublicProgramPage() {
 
   const days = weekRangeFor(weekAnchor);
 
+  const weekConvocatiIds = new Set<string>();
+  data.trainings.filter((t) => days.includes(t.data)).forEach((t) => (t.convocati || []).forEach((id) => weekConvocatiIds.add(id)));
+  data.matches.filter((m) => days.includes(m.data)).forEach((m) => (m.convocati || []).forEach((id) => weekConvocatiIds.add(id)));
+  const visibleRoster = data.roster.filter((p) => weekConvocatiIds.has(p.id));
+
   return (
     <div style={{ background: 'var(--panna)', minHeight: '100vh' }}>
       <div className="stripe">
@@ -149,7 +154,7 @@ export default function PublicProgramPage() {
               days={days}
               trainings={data.trainings}
               matches={data.matches}
-              roster={data.roster}
+              roster={visibleRoster}
               settings={{
                 club_name: data.clubName, logo_url: data.logoUrl,
                 coach_nome: data.coachNome, coach_telefono: data.coachTelefono, coach_email: data.coachEmail,
