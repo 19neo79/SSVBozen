@@ -22,7 +22,7 @@ export function useRecurringDefaults() {
 export function useSaveRecurringDefaults() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (rows: { giorno: Giorno; orario: string | null; venue_id: string | null; palestra_custom: string | null }[]) => {
+    mutationFn: async (rows: { giorno: Giorno; orario: string | null; venue_id: string | null; palestra_custom: string | null; convocati: string[] }[]) => {
       const { error } = await supabase.from('recurring_defaults').upsert(rows, { onConflict: 'giorno' });
       if (error) throw error;
     },

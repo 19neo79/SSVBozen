@@ -103,6 +103,7 @@ export interface RecurringDefault {
   orario: string | null;
   venue_id: string | null;
   palestra_custom: string | null;
+  convocati: string[];
 }
 
 // ---------- public (unauthenticated) views ----------

@@ -72,32 +72,25 @@ export default function TrainingsPage() {
 
   useEffect(() => {
     const allIds = roster.map((p) => p.id);
-    setDays((prev) => ({
-      lun: { ...prev.lun, convocati: allIds },
-      mer: { ...prev.mer, convocati: allIds },
-      ven: { ...prev.ven, convocati: allIds },
-    }));
-    setSingleConvocati(allIds);
-  }, [roster.length]);
-
-  useEffect(() => {
-    if (!recurringDefaults) return;
     setDays((prev) => {
       const next = { ...prev };
       (Object.keys(next) as Giorno[]).forEach((g) => {
-        const d = recurringDefaults[g];
-        if (d) {
-          next[g] = {
-            ...next[g],
-            orario: d.orario || next[g].orario,
-            venueSel: d.venue_id || (d.palestra_custom ? '__custom__' : ''),
-            custom: d.palestra_custom || '',
-          };
-        }
+        const d = recurringDefaults?.[g];
+        const savedConvocati = d?.convocati;
+        next[g] = {
+          ...next[g],
+          orario: d?.orario || next[g].orario,
+          venueSel: d ? (d.venue_id || (d.palestra_custom ? '__custom__' : '')) : next[g].venueSel,
+          custom: d?.palestra_custom || next[g].custom,
+          convocati: savedConvocati && savedConvocati.length > 0
+            ? savedConvocati.filter((id) => allIds.includes(id))
+            : allIds,
+        };
       });
       return next;
     });
-  }, [recurringDefaults]);
+    setSingleConvocati(allIds);
+  }, [roster.length, recurringDefaults]);
 
   const weekDays = weekRangeFor(week);
   const dayMap: Record<Giorno, string> = { lun: weekDays[0], mer: weekDays[2], ven: weekDays[4] };
@@ -117,7 +110,7 @@ export default function TrainingsPage() {
     if (!week) { showToast('Scegli la settimana'); return; }
     const existing = new Set(trainings.map((t) => `${t.data}|${t.orario}|${t.venue_id || ''}|${(t.palestra_custom || '').toLowerCase()}`));
     const rows: Partial<Training>[] = [];
-    const newDefaults: { giorno: Giorno; orario: string | null; venue_id: string | null; palestra_custom: string | null }[] = [];
+    const newDefaults: { giorno: Giorno; orario: string | null; venue_id: string | null; palestra_custom: string | null; convocati: string[] }[] = [];
     let skipped = 0, incomplete = 0;
 
     for (const { key } of GIORNI) {
@@ -133,7 +126,7 @@ export default function TrainingsPage() {
         rows.push({ data: dataStr, orario: d.orario, venue_id, palestra_custom, convocati: d.convocati, presenze: [] });
         existing.add(k);
       }
-      newDefaults.push({ giorno: key, orario: d.orario, venue_id, palestra_custom });
+      newDefaults.push({ giorno: key, orario: d.orario, venue_id, palestra_custom, convocati: d.convocati });
     }
 
     if (rows.length === 0 && skipped === 0) {
