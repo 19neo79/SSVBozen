@@ -94,6 +94,7 @@ export default function WeekPlanPage() {
         Suggerimento: dopo aver premuto &quot;Stampa / Salva PDF&quot;, scegli &quot;Salva come PDF&quot; nella finestra di stampa (o &quot;Salva su file&quot; da telefono). Il PDF risultante puoi condividerlo direttamente nel gruppo WhatsApp dei genitori.
       </div>
 
+      <div className="scroll-hint no-print">← Scorri per vedere tutta la settimana →</div>
       <div className="piano-preview">
         <div className="card">
           <FoglioSettimanale days={days} trainings={trainings} matches={matches} roster={roster} settings={settings} locatables={locatables} />

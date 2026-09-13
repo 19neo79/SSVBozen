@@ -148,6 +148,7 @@ export default function PublicProgramPage() {
         <div className="card no-print" style={{ fontSize: 13, color: 'var(--inchiostro-soft)' }}>
           <strong>{fmtDateShort(days[0])} — {fmtDateShort(days[6])}</strong> · Questa pagina è pubblica: condividila pure nel gruppo WhatsApp dei genitori.
         </div>
+        <div className="scroll-hint">← Scorri per vedere tutta la settimana →</div>
         <div className="piano-preview">
           <div className="card">
             <FoglioSettimanale
