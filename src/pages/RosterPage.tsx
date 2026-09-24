@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUi } from '../contexts/UiContext';
 import { useDeletePlayer, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
 import type { RosterPlayer } from '../types/database';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
+import { calcolaCodiceFiscale, caricaComuni, cercaComuni, type Comune, type Sesso } from '../lib/codiceFiscale';
 import {
   csvEscape,
   downloadCSV,
@@ -36,6 +37,7 @@ const emptyForm = {
   nome: '', cognome: '', numero: '', data_nascita: '', codice_fiscale: '', ruolo: '',
   telefono_atleta: '', nome_papa: '', telefono_papa: '', nome_mamma: '', telefono_mamma: '', certificato: '',
   solo_u15: false,
+  sesso: '' as '' | Sesso, luogo_nascita: '', luogo_nascita_cc: '',
 };
 
 function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean } {
@@ -60,6 +62,47 @@ export default function RosterPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [comuni, setComuni] = useState<Comune[]>([]);
+  const [cfAuto, setCfAuto] = useState(false);
+
+  useEffect(() => {
+    if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
+  }, [formOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const suggerimenti = useMemo(() => cercaComuni(comuni, form.luogo_nascita), [comuni, form.luogo_nascita]);
+
+  const cfCalcolato = useMemo(
+    () => (form.sesso && form.luogo_nascita_cc
+      ? calcolaCodiceFiscale({
+        nome: form.nome, cognome: form.cognome, dataNascita: form.data_nascita,
+        sesso: form.sesso, codiceCatastale: form.luogo_nascita_cc,
+      })
+      : null),
+    [form.nome, form.cognome, form.data_nascita, form.sesso, form.luogo_nascita_cc],
+  );
+
+  useEffect(() => {
+    if (!formOpen) return;
+    if (cfCalcolato && (form.codice_fiscale === '' || cfAuto)) {
+      if (form.codice_fiscale !== cfCalcolato) setForm((f) => ({ ...f, codice_fiscale: cfCalcolato }));
+      setCfAuto(true);
+    } else if (!cfCalcolato && cfAuto) {
+      setForm((f) => ({ ...f, codice_fiscale: '' }));
+      setCfAuto(false);
+    }
+  }, [cfCalcolato]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleLuogoChange(value: string) {
+    const match = comuni.find((c) => c.label === value.toUpperCase());
+    setForm((f) => ({ ...f, luogo_nascita: value, luogo_nascita_cc: match ? match.cc : '' }));
+  }
+
+  const campiMancanti = [
+    !form.nome.trim() || !form.cognome.trim() ? 'nome e cognome' : null,
+    !form.data_nascita ? 'data di nascita' : null,
+    !form.sesso ? 'sesso' : null,
+    !form.luogo_nascita_cc ? 'luogo di nascita (scelto dall\'elenco)' : null,
+  ].filter(Boolean) as string[];
 
   function openForm(p?: RosterPlayer) {
     if (p) {
@@ -70,11 +113,13 @@ export default function RosterPage() {
         telefono_atleta: p.telefono_atleta || '', nome_papa: p.nome_papa || '', telefono_papa: p.telefono_papa || '',
         nome_mamma: p.nome_mamma || '', telefono_mamma: p.telefono_mamma || '', certificato: p.certificato || '',
         solo_u15: p.solo_u15,
+        sesso: p.sesso || '', luogo_nascita: p.luogo_nascita || '', luogo_nascita_cc: p.luogo_nascita_cc || '',
       });
     } else {
       setEditingId(null);
       setForm(emptyForm);
     }
+    setCfAuto(false);
     setFormOpen(true);
   }
 
@@ -86,6 +131,10 @@ export default function RosterPage() {
   async function handleSave() {
     if (!form.nome.trim() || !form.cognome.trim()) {
       showToast('Inserisci almeno nome e cognome');
+      return;
+    }
+    if (form.luogo_nascita.trim() && !form.luogo_nascita_cc) {
+      showToast('Scegli il luogo di nascita dall\'elenco dei comuni (o svuota il campo)');
       return;
     }
     const data = {
@@ -102,6 +151,9 @@ export default function RosterPage() {
       telefono_mamma: form.telefono_mamma.trim() || null,
       certificato: form.certificato || null,
       solo_u15: form.solo_u15,
+      sesso: form.sesso || null,
+      luogo_nascita: form.luogo_nascita_cc ? form.luogo_nascita.toUpperCase() : null,
+      luogo_nascita_cc: form.luogo_nascita_cc || null,
     };
     try {
       await savePlayer.mutateAsync({ id: editingId, data });
@@ -255,7 +307,60 @@ export default function RosterPage() {
           </div>
           <div className="row" style={{ marginTop: 12 }}>
             <div className="field"><label>Data di nascita</label><input type="date" value={form.data_nascita} onChange={(e) => setForm({ ...form, data_nascita: e.target.value })} /></div>
-            <div className="field"><label>Codice fiscale</label><input style={{ width: 220, textTransform: 'uppercase' }} value={form.codice_fiscale} onChange={(e) => setForm({ ...form, codice_fiscale: e.target.value })} /></div>
+            <div className="field">
+              <label>Sesso</label>
+              <select style={{ width: 110 }} value={form.sesso} onChange={(e) => setForm({ ...form, sesso: e.target.value as '' | Sesso })}>
+                <option value="">—</option>
+                <option value="M">Maschio</option>
+                <option value="F">Femmina</option>
+              </select>
+            </div>
+            <div className="field" style={{ flex: 1, minWidth: 220 }}>
+              <label>Luogo di nascita (comune o stato estero)</label>
+              <input
+                list="comuni-nascita"
+                style={{ width: '100%', textTransform: 'uppercase' }}
+                placeholder="Scrivi e scegli dall'elenco…"
+                value={form.luogo_nascita}
+                onChange={(e) => handleLuogoChange(e.target.value)}
+              />
+              <datalist id="comuni-nascita">
+                {suggerimenti.map((c) => <option key={`${c.cc}-${c.label}`} value={c.label} />)}
+              </datalist>
+              {form.luogo_nascita && !form.luogo_nascita_cc && (
+                <span className="muted" style={{ fontSize: 12 }}>Scegli un comune dall'elenco proposto (codice catastale non ancora riconosciuto).</span>
+              )}
+              {form.luogo_nascita_cc && <span className="muted" style={{ fontSize: 12 }}>Codice catastale: {form.luogo_nascita_cc}</span>}
+            </div>
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <div className="field">
+              <label>Codice fiscale</label>
+              <input
+                style={{ width: 220, textTransform: 'uppercase' }}
+                value={form.codice_fiscale}
+                onChange={(e) => { setCfAuto(false); setForm({ ...form, codice_fiscale: e.target.value }); }}
+              />
+              {cfAuto && <span className="muted" style={{ fontSize: 12 }}>Calcolato automaticamente (modificabile a mano)</span>}
+              {!cfAuto && cfCalcolato && form.codice_fiscale.trim().toUpperCase() === cfCalcolato && (
+                <span className="muted" style={{ fontSize: 12 }}>✓ Coincide con il codice calcolato</span>
+              )}
+              {!cfAuto && cfCalcolato && form.codice_fiscale.trim() && form.codice_fiscale.trim().toUpperCase() !== cfCalcolato && (
+                <span style={{ fontSize: 12, color: 'var(--rosso)' }}>
+                  Diverso dal calcolato ({cfCalcolato}): può essere omocodia o un dato da controllare.{' '}
+                  <button type="button" className="btn ghost small" onClick={() => { setForm({ ...form, codice_fiscale: cfCalcolato }); setCfAuto(true); }}>Usa il calcolato</button>
+                </span>
+              )}
+              {!cfAuto && cfCalcolato && !form.codice_fiscale.trim() && (
+                <span className="muted" style={{ fontSize: 12 }}>
+                  Codice calcolabile: {cfCalcolato}{' '}
+                  <button type="button" className="btn ghost small" onClick={() => { setForm({ ...form, codice_fiscale: cfCalcolato }); setCfAuto(true); }}>Inserisci</button>
+                </span>
+              )}
+              {!cfCalcolato && !form.codice_fiscale && campiMancanti.length > 0 && (
+                <span className="muted" style={{ fontSize: 12 }}>Per il calcolo automatico servono: {campiMancanti.join(', ')}.</span>
+              )}
+            </div>
             <div className="field">
               <label>Ruolo</label>
               <select style={{ width: 170 }} value={form.ruolo} onChange={(e) => setForm({ ...form, ruolo: e.target.value })}>
@@ -326,6 +431,8 @@ export default function RosterPage() {
             <dl className="detail-list">
               <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
+              <div><dt>Sesso</dt><dd>{viewingPlayer.sesso === 'M' ? 'Maschio' : viewingPlayer.sesso === 'F' ? 'Femmina' : '—'}</dd></div>
+              <div><dt>Luogo di nascita</dt><dd>{viewingPlayer.luogo_nascita || '—'}</dd></div>
               <div><dt>Codice fiscale</dt><dd>{viewingPlayer.codice_fiscale || '—'}</dd></div>
               <div>
                 <dt>Certificato medico</dt>
