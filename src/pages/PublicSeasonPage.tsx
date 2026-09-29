@@ -3,12 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveLocation } from '../lib/location';
 import { dayLabelShort, fmtISODate, todayISO } from '../lib/dates';
-import type {
-  PublicMatch,
-  PublicSettingsBasic,
-  PublicTraining,
-  PublicVenueBasic,
-} from '../types/database';
+import type { PublicMatch, PublicSettingsBasic, PublicVenueBasic } from '../types/database';
 
 function currentMese(): string {
   return todayISO().slice(0, 7);
@@ -36,16 +31,11 @@ function meseLabel(mese: string): string {
 }
 
 interface Data {
-  trainings: PublicTraining[];
   matches: PublicMatch[];
   venues: PublicVenueBasic[];
   clubName: string;
   logoUrl: string | null;
 }
-
-type Ev =
-  | { type: 'training'; item: PublicTraining }
-  | { type: 'match'; item: PublicMatch };
 
 export default function PublicSeasonPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -59,21 +49,19 @@ export default function PublicSeasonPage() {
     async function load() {
       setLoading(true);
       const { start, end } = monthRange(mese);
-      const [trainingsRes, matchesRes, venuesRes, settingsRes] = await Promise.all([
-        supabase.from('public_trainings').select('*').gte('data', start).lte('data', end),
+      const [matchesRes, venuesRes, settingsRes] = await Promise.all([
         supabase.from('public_matches').select('*').gte('data', start).lte('data', end),
         supabase.from('public_venues_basic').select('*'),
         supabase.from('public_settings_basic').select('*').maybeSingle(),
       ]);
       if (!mounted) return;
-      if (trainingsRes.error || matchesRes.error || venuesRes.error) {
+      if (matchesRes.error || venuesRes.error) {
         setError(true);
         setLoading(false);
         return;
       }
       const settingsRow = settingsRes.data as PublicSettingsBasic | null;
       setData({
-        trainings: (trainingsRes.data || []) as PublicTraining[],
         matches: (matchesRes.data || []) as PublicMatch[],
         venues: (venuesRes.data || []) as PublicVenueBasic[],
         clubName: settingsRow?.club_name || 'SSV Bozen Volley',
@@ -95,22 +83,18 @@ export default function PublicSeasonPage() {
   const clubName = data?.clubName || 'SSV Bozen Volley';
   const today = todayISO();
 
-  const eventsByDay = (() => {
-    if (!data) return [] as { data: string; events: Ev[] }[];
-    const map = new Map<string, Ev[]>();
-    data.trainings.forEach((t) => {
-      if (!map.has(t.data)) map.set(t.data, []);
-      map.get(t.data)!.push({ type: 'training', item: t });
-    });
+  const matchesByDay = (() => {
+    if (!data) return [] as { data: string; matches: PublicMatch[] }[];
+    const map = new Map<string, PublicMatch[]>();
     data.matches.forEach((m) => {
       if (!map.has(m.data)) map.set(m.data, []);
-      map.get(m.data)!.push({ type: 'match', item: m });
+      map.get(m.data)!.push(m);
     });
     return Array.from(map.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([data, events]) => ({
+      .map(([data, matches]) => ({
         data,
-        events: events.sort((a, b) => a.item.orario.localeCompare(b.item.orario)),
+        matches: matches.sort((a, b) => a.orario.localeCompare(b.orario)),
       }));
   })();
 
@@ -131,13 +115,13 @@ export default function PublicSeasonPage() {
           )}
           <div>
             <div className="club-name">{clubName}</div>
-            <div className="club-sub">Calendario allenamenti e partite</div>
+            <div className="club-sub">Calendario partite</div>
           </div>
         </div>
       </header>
       <main>
         <div className="card" style={{ fontSize: 13, color: 'var(--inchiostro-soft)' }}>
-          Questa pagina è pubblica e mostra tutti gli impegni della squadra: condividila pure nel gruppo WhatsApp dei genitori.
+          Questa pagina è pubblica e mostra tutte le partite della squadra: condividila pure nel gruppo WhatsApp dei genitori.
         </div>
 
         <div className="card">
@@ -157,33 +141,18 @@ export default function PublicSeasonPage() {
           <div className="card">Caricamento…</div>
         ) : error ? (
           <div className="card">Impossibile caricare il calendario. Riprova più tardi.</div>
-        ) : eventsByDay.length === 0 ? (
-          <div className="empty">Nessun allenamento o partita programmati in {meseLabel(mese).toLowerCase()}.</div>
+        ) : matchesByDay.length === 0 ? (
+          <div className="empty">Nessuna partita programmata in {meseLabel(mese).toLowerCase()}.</div>
         ) : (
           <div className="event-list">
-            {eventsByDay.map(({ data: giorno, events }) => (
+            {matchesByDay.map(({ data: giorno, matches }) => (
               <div className="card" key={giorno} style={{ padding: '14px 18px' }}>
                 <div style={{ fontFamily: "'Barlow Condensed'", fontWeight: 800, fontSize: 17, marginBottom: 10 }}>
                   {dayLabelShort(giorno)}
                   {giorno === today && <span className="tag-svolto" style={{ marginLeft: 8 }}>Oggi</span>}
                 </div>
                 <div className="event-list" style={{ marginTop: 0 }}>
-                  {events.map((e, i) => {
-                    if (e.type === 'training') {
-                      const t = e.item;
-                      const loc = resolveLocation(t.venue_id, t.palestra_custom, data!.venues);
-                      return (
-                        <div className="event" key={`t-${i}`}>
-                          <div className="event-main">
-                            <div className="event-date">Allenamento</div>
-                            <div className="event-detail">
-                              {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                    const m = e.item;
+                  {matches.map((m, i) => {
                     const loc = resolveLocation(m.venue_id, m.luogo_custom, data!.venues);
                     return (
                       <div className="event match" key={`m-${i}`}>

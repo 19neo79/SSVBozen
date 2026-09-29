@@ -101,13 +101,13 @@ export default function WeekPlanPage() {
       </div>
 
       <div className="card no-print">
-        <h3 style={{ fontSize: 17 }}>Condividi tutto il calendario</h3>
+        <h3 style={{ fontSize: 17 }}>Condividi tutte le partite</h3>
         <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-          Questo link mostra il calendario completo (allenamenti e partite) mese per mese, sempre aggiornato — non
+          Questo link mostra tutte le partite della stagione mese per mese, sempre aggiornato — non
           contiene dati riservati, va bene condividerlo una volta per tutte con i genitori.
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn" onClick={handleCopySeasonLink}>Copia link calendario completo</button>
+          <button className="btn" onClick={handleCopySeasonLink}>Copia link partite</button>
           <a className="btn ghost" href={`${window.location.origin}/campionato`} target="_blank" rel="noopener noreferrer">Anteprima</a>
         </div>
       </div>
