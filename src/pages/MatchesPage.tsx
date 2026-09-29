@@ -26,8 +26,8 @@ const MATCH_HEADER_MAP: Record<string, string> = {
   casatrasferta: 'casa_trasferta', casaotrasferta: 'casa_trasferta', trasferta: 'casa_trasferta',
   categoria: 'categoria', under: 'categoria', squadra: 'categoria',
   avversario: 'avversario', squadraavversaria: 'avversario',
-  palestra: 'venue_name', luogo: 'venue_name', luogopalestra: 'venue_name', sede: 'venue_name',
-  ngarafipav: 'numero_gara_fipav', numerogarafipav: 'numero_gara_fipav', numerogara: 'numero_gara_fipav', garafipav: 'numero_gara_fipav',
+  palestra: 'venue_name', luogo: 'venue_name', luogopalestra: 'venue_name', palestraluogo: 'venue_name', sede: 'venue_name',
+  ngara: 'numero_gara_fipav', ngarafipav: 'numero_gara_fipav', numerogarafipav: 'numero_gara_fipav', numerogara: 'numero_gara_fipav', garafipav: 'numero_gara_fipav',
 };
 
 function normalizeCasaTrasferta(str: string): CasaTrasferta {
@@ -36,6 +36,10 @@ function normalizeCasaTrasferta(str: string): CasaTrasferta {
 function normalizeCategoria(str: string): Categoria {
   const m = (str || '').match(/1[45]/);
   return m ? (('U' + m[0]) as Categoria) : 'U14';
+}
+/** Confronto tollerante a maiuscole/minuscole e a spazi doppi/accidentali. */
+function normalizeVenueName(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 export default function MatchesPage() {
@@ -328,18 +332,24 @@ export default function MatchesPage() {
       const avversarioNome = rec.avversario || '';
       if (!dataIso || !avversarioNome) { skipped++; continue; }
 
+      const categoriaRec = normalizeCategoria(rec.categoria);
+      const avvMatch = avversari.find(
+        (o) => o.categoria === categoriaRec && o.nome.trim().toLowerCase() === avversarioNome.trim().toLowerCase(),
+      );
+
       let venue_id: string | null = null;
       let luogo_custom: string | null = null;
       if (rec.venue_name) {
-        const v = venues.find((v) => v.nome.trim().toLowerCase() === rec.venue_name.trim().toLowerCase());
+        const v = venues.find((v) => normalizeVenueName(v.nome) === normalizeVenueName(rec.venue_name));
         if (v) venue_id = v.id;
         else luogo_custom = rec.venue_name;
       }
       rows.push({
         data: dataIso, orario: rec.orario || '',
         casa_trasferta: normalizeCasaTrasferta(rec.casa_trasferta),
-        categoria: normalizeCategoria(rec.categoria),
-        avversario: avversarioNome, venue_id, luogo_custom, convocati: [], presenze: [],
+        categoria: categoriaRec,
+        avversario: avvMatch?.nome || avversarioNome, avversario_id: avvMatch?.id || null,
+        venue_id, luogo_custom, convocati: [], presenze: [],
         numero_gara_fipav: rec.numero_gara_fipav || null,
       });
       added++;
