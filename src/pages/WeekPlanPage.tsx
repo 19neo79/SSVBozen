@@ -63,6 +63,16 @@ export default function WeekPlanPage() {
     }
   }
 
+  async function handleCopySeasonLink() {
+    const url = `${window.location.origin}/campionato`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Link copiato negli appunti — incollalo pure su WhatsApp');
+    } catch {
+      window.prompt('Copia questo link:', url);
+    }
+  }
+
   return (
     <section>
       <WeekPicker
@@ -87,6 +97,18 @@ export default function WeekPlanPage() {
         <div className="row" style={{ gap: 8 }}>
           <button className="btn" onClick={handleCopyPublicLink}>Copia link pubblico per questa settimana</button>
           <button className="btn ghost" onClick={handlePreviewPublicLink}>Anteprima</button>
+        </div>
+      </div>
+
+      <div className="card no-print">
+        <h3 style={{ fontSize: 17 }}>Condividi tutto il calendario</h3>
+        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          Questo link mostra il calendario completo (allenamenti e partite) mese per mese, sempre aggiornato — non
+          contiene dati riservati, va bene condividerlo una volta per tutte con i genitori.
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn" onClick={handleCopySeasonLink}>Copia link calendario completo</button>
+          <a className="btn ghost" href={`${window.location.origin}/campionato`} target="_blank" rel="noopener noreferrer">Anteprima</a>
         </div>
       </div>
 

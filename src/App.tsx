@@ -4,6 +4,7 @@ import { ProtectedLayout } from './components/layout/ProtectedLayout';
 import { RequireAdmin } from './components/layout/RequireAdmin';
 import LoginPage from './pages/LoginPage';
 import PublicProgramPage from './pages/PublicProgramPage';
+import PublicSeasonPage from './pages/PublicSeasonPage';
 import TrainingsPage from './pages/TrainingsPage';
 import MatchesPage from './pages/MatchesPage';
 import WeekPlanPage from './pages/WeekPlanPage';
@@ -24,6 +25,7 @@ function App() {
   return (
     <Routes>
       <Route path="/programma/:token" element={<PublicProgramPage />} />
+      <Route path="/campionato" element={<PublicSeasonPage />} />
       <Route path="/programma" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={session ? <Navigate to="/app/allenamenti" replace /> : <LoginPage />} />
 
