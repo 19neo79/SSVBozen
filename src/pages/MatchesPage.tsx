@@ -64,6 +64,11 @@ export default function MatchesPage() {
   const [convocati, setConvocati] = useState<string[]>(roster.map((p) => p.id));
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
+  const [editingDetailsId, setEditingDetailsId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    data: '', orario: '', casaTrasferta: 'Casa' as CasaTrasferta, categoria: 'U14' as Categoria,
+    avvSel: '', avvCustom: '', venueSel: '', venueCustom: '', amichevole: false,
+  });
 
   useEffect(() => {
     setConvocati(roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria, p.solo_u15)).map((p) => p.id));
@@ -75,6 +80,12 @@ export default function MatchesPage() {
   const opponentVenueIds = new Set(avversarioVenueLinks.filter((l) => l.avversario_id === opponent?.id).map((l) => l.venue_id));
   const opponentVenues = opponent ? venues.filter((v) => opponentVenueIds.has(v.id)) : [];
   const usaCampoAvversario = casaTrasferta === 'Trasferta' && opponentVenues.length > 0;
+
+  const editOpponent = avversari.find((o) => o.id === editForm.avvSel) || null;
+  const editFilteredOpponents = avversari.filter((o) => o.categoria === editForm.categoria).sort((a, b) => a.nome.localeCompare(b.nome));
+  const editOpponentVenueIds = new Set(avversarioVenueLinks.filter((l) => l.avversario_id === editOpponent?.id).map((l) => l.venue_id));
+  const editOpponentVenues = editOpponent ? venues.filter((v) => editOpponentVenueIds.has(v.id)) : [];
+  const editUsaCampoAvversario = editForm.casaTrasferta === 'Trasferta' && editOpponentVenues.length > 0;
 
   async function handleAdd() {
     let avversarioNome: string;
@@ -181,6 +192,61 @@ export default function MatchesPage() {
     }
   }
 
+  function openEditDetails(m: Match) {
+    setEditingConvocatiId(null);
+    setEditingDetailsId(m.id);
+    setEditForm({
+      data: m.data,
+      orario: m.orario,
+      casaTrasferta: m.casa_trasferta,
+      categoria: m.categoria,
+      avvSel: m.avversario_id || '__custom__',
+      avvCustom: m.avversario_id ? '' : m.avversario,
+      venueSel: m.venue_id || (m.luogo_custom ? '__custom__' : ''),
+      venueCustom: m.luogo_custom || '',
+      amichevole: m.amichevole,
+    });
+  }
+
+  function closeEditDetails() {
+    setEditingDetailsId(null);
+  }
+
+  async function saveEditDetails(m: Match) {
+    let avversarioNome: string;
+    let avversarioId: string | null = null;
+    if (editOpponent) { avversarioNome = editOpponent.nome; avversarioId = editOpponent.id; }
+    else { avversarioNome = editForm.avvCustom.trim(); }
+
+    let venue_id: string | null = null;
+    let luogo_custom: string | null = null;
+    if (editUsaCampoAvversario) {
+      venue_id = editOpponentVenues.length === 1 ? editOpponentVenues[0].id : (editForm.venueSel || null);
+    } else {
+      venue_id = editForm.venueSel && editForm.venueSel !== '__custom__' ? editForm.venueSel : null;
+      luogo_custom = editForm.venueSel === '__custom__' ? editForm.venueCustom.trim() : null;
+    }
+
+    if (!editForm.data || !editForm.orario || !avversarioNome || (!venue_id && !luogo_custom)) {
+      showToast('Compila tutti i campi della partita');
+      return;
+    }
+
+    try {
+      await updateMatch.mutateAsync({
+        id: m.id,
+        data: {
+          data: editForm.data, orario: editForm.orario, casa_trasferta: editForm.casaTrasferta, categoria: editForm.categoria,
+          avversario: avversarioNome, avversario_id: avversarioId, venue_id, luogo_custom, amichevole: editForm.amichevole,
+        },
+      });
+      closeEditDetails();
+      showToast('Partita aggiornata');
+    } catch {
+      showToast('Errore nel salvataggio delle modifiche');
+    }
+  }
+
   async function handleDelete(id: string) {
     const ok = await confirm('Eliminare questa partita?');
     if (!ok) return;
@@ -193,6 +259,7 @@ export default function MatchesPage() {
   }
 
   function openEditConvocati(m: Match) {
+    setEditingDetailsId(null);
     setEditingConvocatiId(m.id);
     setEditingConvocatiSelection(m.convocati || []);
   }
@@ -406,29 +473,113 @@ export default function MatchesPage() {
               .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
             const loc = resolveLocation(m.venue_id, m.luogo_custom, venues);
             const isEditingConvocati = editingConvocatiId === m.id;
+            const isEditingDetails = editingDetailsId === m.id;
             return (
               <div className="event match" key={m.id}>
                 <div className="event-main">
-                  <div className="event-date">
-                    {fmtDate(m.data)}
-                    <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
-                    {m.amichevole && <span className="tag-svolto">Amichevole</span>}
-                  </div>
-                  <div className="event-detail">
-                    {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-                    {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                  </div>
-                  <div className="field" style={{ marginTop: 6, maxWidth: 160 }}>
-                    <label style={{ fontSize: 11 }}>N. Gara FIPAV</label>
-                    <input
-                      key={`${m.id}-${m.numero_gara_fipav || ''}`}
-                      style={{ width: '100%' }}
-                      defaultValue={m.numero_gara_fipav || ''}
-                      placeholder="—"
-                      onBlur={(e) => saveNumeroGara(m, e.target.value)}
-                    />
-                  </div>
-                  {isEditingConvocati ? (
+                  {isEditingDetails ? (
+                    <div className="field" style={{ marginTop: 4 }}>
+                      <div className="row">
+                        <div className="field"><label>Data</label><input type="date" value={editForm.data} onChange={(e) => setEditForm({ ...editForm, data: e.target.value })} /></div>
+                        <div className="field">
+                          <label>Orario</label>
+                          <TimeSingleInput value={editForm.orario} onChange={(v) => setEditForm({ ...editForm, orario: v })} />
+                        </div>
+                        <div className="field">
+                          <label>Casa / Trasferta</label>
+                          <select value={editForm.casaTrasferta} onChange={(e) => setEditForm({ ...editForm, casaTrasferta: e.target.value as CasaTrasferta })}>
+                            <option value="Casa">Casa</option>
+                            <option value="Trasferta">Trasferta</option>
+                          </select>
+                        </div>
+                        <div className="field">
+                          <label>Categoria</label>
+                          <select value={editForm.categoria} onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value as Categoria, avvSel: '' })}>
+                            <option value="U14">Under 14</option>
+                            <option value="U15">Under 15</option>
+                          </select>
+                        </div>
+                        <label className="chk" style={{ alignSelf: 'flex-end', marginBottom: 2 }}>
+                          <input type="checkbox" checked={editForm.amichevole} onChange={(e) => setEditForm({ ...editForm, amichevole: e.target.checked })} />
+                          Amichevole
+                        </label>
+                      </div>
+                      <div className="row" style={{ marginTop: 12 }}>
+                        <div className="field" style={{ flex: 1, minWidth: 200 }}>
+                          <label>Avversario</label>
+                          <select style={{ width: '100%' }} value={editForm.avvSel} onChange={(e) => setEditForm({ ...editForm, avvSel: e.target.value })}>
+                            <option value="">— scegli avversario —</option>
+                            {editFilteredOpponents.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                            <option value="__custom__">Altro (inserisci manualmente)</option>
+                          </select>
+                        </div>
+                        {editForm.avvSel === '__custom__' && (
+                          <div className="field" style={{ flex: 1, minWidth: 200 }}>
+                            <label>Nome avversario</label>
+                            <input style={{ width: '100%' }} value={editForm.avvCustom} onChange={(e) => setEditForm({ ...editForm, avvCustom: e.target.value })} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="row" style={{ marginTop: 12 }}>
+                        <div className="field" style={{ flex: 1, minWidth: 200 }}>
+                          <label>{editUsaCampoAvversario ? 'Campo avversario' : 'Luogo / Palestra'}</label>
+                          {editUsaCampoAvversario ? (
+                            editOpponentVenues.length === 1 ? (
+                              <select style={{ width: '100%' }} value={editOpponentVenues[0].id} disabled>
+                                <option value={editOpponentVenues[0].id}>{editOpponentVenues[0].nome}</option>
+                              </select>
+                            ) : (
+                              <select style={{ width: '100%' }} value={editForm.venueSel} onChange={(e) => setEditForm({ ...editForm, venueSel: e.target.value })}>
+                                <option value="">— scegli campo —</option>
+                                {editOpponentVenues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                              </select>
+                            )
+                          ) : (
+                            <select style={{ width: '100%' }} value={editForm.venueSel} onChange={(e) => setEditForm({ ...editForm, venueSel: e.target.value })}>
+                              <option value="">— scegli palestra —</option>
+                              {venues.filter((v) => !avversarioVenueLinks.some((l) => l.venue_id === v.id)).map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                              <option value="__custom__">Altro (inserisci manualmente)</option>
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                      {!editUsaCampoAvversario && editForm.venueSel === '__custom__' && (
+                        <div className="row" style={{ marginTop: 8 }}>
+                          <div className="field" style={{ flex: 1, minWidth: 200 }}>
+                            <label>Nome luogo</label>
+                            <input style={{ width: '100%' }} value={editForm.venueCustom} onChange={(e) => setEditForm({ ...editForm, venueCustom: e.target.value })} />
+                          </div>
+                        </div>
+                      )}
+                      <div className="settings-actions">
+                        <button className="btn ghost" onClick={closeEditDetails}>Annulla</button>
+                        <button className="btn" onClick={() => saveEditDetails(m)}>Salva modifiche</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="event-date">
+                        {fmtDate(m.data)}
+                        <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
+                        {m.amichevole && <span className="tag-svolto">Amichevole</span>}
+                      </div>
+                      <div className="event-detail">
+                        {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
+                        {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                      </div>
+                      <div className="field" style={{ marginTop: 6, maxWidth: 160 }}>
+                        <label style={{ fontSize: 11 }}>N. Gara FIPAV</label>
+                        <input
+                          key={`${m.id}-${m.numero_gara_fipav || ''}`}
+                          style={{ width: '100%' }}
+                          defaultValue={m.numero_gara_fipav || ''}
+                          placeholder="—"
+                          onBlur={(e) => saveNumeroGara(m, e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {isEditingDetails ? null : isEditingConvocati ? (
                     <div className="field" style={{ marginTop: 10 }}>
                       <div className="row" style={{ alignItems: 'center', gap: 10 }}>
                         <label style={{ margin: 0 }}>Convocati</label>
@@ -470,8 +621,9 @@ export default function MatchesPage() {
                     </>
                   )}
                 </div>
-                {!isEditingConvocati && (
+                {!isEditingConvocati && !isEditingDetails && (
                   <div className="event-actions">
+                    <button className="btn ghost small" onClick={() => openEditDetails(m)}>Modifica</button>
                     <button className="btn ghost small" onClick={() => openEditConvocati(m)}>Modifica convocati</button>
                     <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>
                   </div>
