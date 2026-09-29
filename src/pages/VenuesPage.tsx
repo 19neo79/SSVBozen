@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useDeleteVenue, useSaveVenue, useUpsertManyVenues, useVenues } from '../hooks/useVenues';
 import { useAvversari } from '../hooks/useAvversari';
+import { useAvversarioVenues } from '../hooks/useAvversarioVenues';
 import type { Venue } from '../types/database';
 import { mapsUrlForVenue } from '../lib/location';
 import { detectDelimiter, normalizeHeader, parseCSVLine, downloadCSV, readCsvFile } from '../lib/csv';
@@ -20,6 +21,7 @@ export default function VenuesPage() {
   const { showToast, confirm } = useUi();
   const { data: venues = [] } = useVenues();
   const { data: avversari = [] } = useAvversari();
+  const { data: links = [] } = useAvversarioVenues();
   const saveVenue = useSaveVenue();
   const deleteVenue = useDeleteVenue();
   const upsertMany = useUpsertManyVenues();
@@ -64,7 +66,11 @@ export default function VenuesPage() {
   }
 
   async function handleDelete(id: string) {
-    const ok = await confirm('Eliminare questa palestra? Gli allenamenti/partite che la usano mostreranno solo il nome salvato.');
+    const condivisaCon = avversariDiVenue(id);
+    const avviso = condivisaCon.length > 1
+      ? ` È condivisa con ${condivisaCon.length} avversari (${condivisaCon.join(', ')}): verrà rimossa per tutti.`
+      : '';
+    const ok = await confirm(`Eliminare questa palestra?${avviso} Gli allenamenti/partite che la usano mostreranno solo il nome salvato.`);
     if (!ok) return;
     try {
       await deleteVenue.mutateAsync(id);
@@ -86,8 +92,10 @@ export default function VenuesPage() {
     URL.revokeObjectURL(url);
   }
 
+  const linkedVenueIds = new Set(links.map((l) => l.venue_id));
+
   function exportCSV() {
-    const ownVenues = venues.filter((v) => !v.avversario_id);
+    const ownVenues = venues.filter((v) => !linkedVenueIds.has(v.id));
     if (ownVenues.length === 0) { showToast('Nessuna palestra da esportare'); return; }
     const headers = ['Nome palestra', 'Indirizzo', 'CAP', 'Città', 'Provincia'];
     const rows = ownVenues.map((v) => [v.nome || '', v.indirizzo || '', v.cap || '', v.citta || '', v.provincia || '']);
@@ -116,7 +124,7 @@ export default function VenuesPage() {
         nome: rec.nome, indirizzo: rec.indirizzo || null, cap: rec.cap || null,
         citta: rec.citta || null, provincia: (rec.provincia || '').toUpperCase() || null,
       };
-      const existing = venues.find((v) => !v.avversario_id && v.nome.trim().toLowerCase() === rec.nome.trim().toLowerCase());
+      const existing = venues.find((v) => !linkedVenueIds.has(v.id) && v.nome.trim().toLowerCase() === rec.nome.trim().toLowerCase());
       if (existing) { rows.push({ id: existing.id, ...data }); updated++; }
       else { rows.push(data); added++; }
     }
@@ -130,11 +138,19 @@ export default function VenuesPage() {
     e.target.value = '';
   }
 
-  const avversarioNome = (id: string | null) => (id ? avversari.find((o) => o.id === id)?.nome || null : null);
+  const avversariDiVenue = (venueId: string) =>
+    links
+      .filter((l) => l.venue_id === venueId)
+      .map((l) => avversari.find((o) => o.id === l.avversario_id)?.nome)
+      .filter((n): n is string => !!n)
+      .sort((a, b) => a.localeCompare(b));
+
   const sorted = [...venues].sort((a, b) => {
-    if (!a.avversario_id !== !b.avversario_id) return a.avversario_id ? 1 : -1;
-    const an = avversarioNome(a.avversario_id) || '';
-    const bn = avversarioNome(b.avversario_id) || '';
+    const aOwn = !linkedVenueIds.has(a.id);
+    const bOwn = !linkedVenueIds.has(b.id);
+    if (aOwn !== bOwn) return aOwn ? -1 : 1;
+    const an = avversariDiVenue(a.id).join(', ');
+    const bn = avversariDiVenue(b.id).join(', ');
     if (an !== bn) return an.localeCompare(bn);
     return a.nome.localeCompare(b.nome);
   });
@@ -177,14 +193,14 @@ export default function VenuesPage() {
       ) : (
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th>Avversario</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Indirizzo</th><th>Città</th><th>Avversari</th><th></th></tr></thead>
             <tbody>
               {sorted.map((v) => (
                 <tr key={v.id}>
                   <td>{v.nome}</td>
                   <td className="muted">{v.indirizzo || '—'}</td>
                   <td className="muted">{[v.cap, v.citta, v.provincia].filter(Boolean).join(' ') || '—'}</td>
-                  <td className="muted">{avversarioNome(v.avversario_id) || '—'}</td>
+                  <td className="muted">{avversariDiVenue(v.id).join(', ') || '—'}</td>
                   <td>
                     <div className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                       <a href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer" className="btn ghost small">Maps</a>

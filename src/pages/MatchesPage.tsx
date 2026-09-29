@@ -3,6 +3,7 @@ import { useUi } from '../contexts/UiContext';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
 import { useAvversari } from '../hooks/useAvversari';
+import { useAvversarioVenues } from '../hooks/useAvversarioVenues';
 import {
   useAddMatch,
   useAddMatchesBulk,
@@ -40,6 +41,7 @@ export default function MatchesPage() {
   const { showToast, confirm } = useUi();
   const { data: roster = [] } = useRoster();
   const { data: venues = [] } = useVenues();
+  const { data: avversarioVenueLinks = [] } = useAvversarioVenues();
   const { data: avversari = [] } = useAvversari();
   const { data: matches = [] } = useMatches();
   const addMatch = useAddMatch();
@@ -68,7 +70,8 @@ export default function MatchesPage() {
   const eligibleRoster = roster.filter((p) => isEligibleForCategoria(p.data_nascita, categoria, p.solo_u15));
   const opponent = avversari.find((o) => o.id === avvSel) || null;
   const filteredOpponents = avversari.filter((o) => o.categoria === categoria).sort((a, b) => a.nome.localeCompare(b.nome));
-  const opponentVenues = opponent ? venues.filter((v) => v.avversario_id === opponent.id) : [];
+  const opponentVenueIds = new Set(avversarioVenueLinks.filter((l) => l.avversario_id === opponent?.id).map((l) => l.venue_id));
+  const opponentVenues = opponent ? venues.filter((v) => opponentVenueIds.has(v.id)) : [];
   const usaCampoAvversario = casaTrasferta === 'Trasferta' && opponentVenues.length > 0;
 
   async function handleAdd() {
@@ -344,7 +347,7 @@ export default function MatchesPage() {
             ) : (
               <select style={{ width: '100%' }} value={venueSel} onChange={(e) => setVenueSel(e.target.value)}>
                 <option value="">— scegli palestra —</option>
-                {venues.filter((v) => !v.avversario_id).map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                {venues.filter((v) => !avversarioVenueLinks.some((l) => l.venue_id === v.id)).map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
                 <option value="__custom__">Altro (inserisci manualmente)</option>
               </select>
             )}

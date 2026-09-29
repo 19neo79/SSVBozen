@@ -18,14 +18,15 @@ export function useVenues() {
 export function useSaveVenue() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string | null; data: Partial<Venue> }) => {
+    mutationFn: async ({ id, data }: { id: string | null; data: Partial<Venue> }): Promise<string> => {
       if (id) {
         const { error } = await supabase.from('venues').update(data).eq('id', id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from('venues').insert(data);
-        if (error) throw error;
+        return id;
       }
+      const { data: created, error } = await supabase.from('venues').insert(data).select('id').single();
+      if (error) throw error;
+      return created.id as string;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });

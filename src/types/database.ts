@@ -18,7 +18,6 @@ export interface Venue {
   cap: string | null;
   citta: string | null;
   provincia: string | null;
-  avversario_id: string | null;
   created_at: string;
 }
 

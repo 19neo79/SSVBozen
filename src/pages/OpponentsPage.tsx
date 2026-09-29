@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useAvversari, useDeleteAvversario, useSaveAvversario } from '../hooks/useAvversari';
-import { useDeleteVenue, useSaveVenue, useVenues } from '../hooks/useVenues';
+import { useSaveVenue, useVenues } from '../hooks/useVenues';
+import { useAvversarioVenues, useLinkAvversarioVenue, useUnlinkAvversarioVenue } from '../hooks/useAvversarioVenues';
 import { mapsUrlForVenue } from '../lib/location';
 import type { Avversario, Categoria, Venue } from '../types/database';
 
@@ -15,10 +16,12 @@ export default function OpponentsPage() {
   const { showToast, confirm } = useUi();
   const { data: avversari = [] } = useAvversari();
   const { data: venues = [] } = useVenues();
+  const { data: links = [] } = useAvversarioVenues();
   const saveAvversario = useSaveAvversario();
   const deleteAvversario = useDeleteAvversario();
   const saveVenue = useSaveVenue();
-  const deleteVenue = useDeleteVenue();
+  const linkVenue = useLinkAvversarioVenue();
+  const unlinkVenue = useUnlinkAvversarioVenue();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,9 +30,19 @@ export default function OpponentsPage() {
   const [managingFor, setManagingFor] = useState<string | null>(null);
   const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [venueForm, setVenueForm] = useState(emptyVenueForm);
+  const [newVenueMode, setNewVenueMode] = useState<'scegli' | 'nuova'>('scegli');
+  const [existingVenueSel, setExistingVenueSel] = useState('');
 
   function opponentVenues(opponentId: string): Venue[] {
-    return venues.filter((v) => v.avversario_id === opponentId);
+    const ids = new Set(links.filter((l) => l.avversario_id === opponentId).map((l) => l.venue_id));
+    return venues.filter((v) => ids.has(v.id));
+  }
+
+  function altriAvversariDi(venueId: string, escludiOpponentId: string): string[] {
+    return links
+      .filter((l) => l.venue_id === venueId && l.avversario_id !== escludiOpponentId)
+      .map((l) => avversari.find((o) => o.id === l.avversario_id)?.nome)
+      .filter((n): n is string => !!n);
   }
 
   function openForm(o?: Avversario) {
@@ -86,6 +99,8 @@ export default function OpponentsPage() {
     setManagingFor(opponentId);
     setEditingVenueId(null);
     setVenueForm(emptyVenueForm);
+    setNewVenueMode('scegli');
+    setExistingVenueSel('');
   }
 
   function closeVenueManager() {
@@ -98,6 +113,17 @@ export default function OpponentsPage() {
     setVenueForm({ nome: v.nome, indirizzo: v.indirizzo || '', cap: v.cap || '', citta: v.citta || '', provincia: v.provincia || '' });
   }
 
+  async function handleLinkExisting() {
+    if (!managingFor || !existingVenueSel) return;
+    try {
+      await linkVenue.mutateAsync({ avversarioId: managingFor, venueId: existingVenueSel });
+      setExistingVenueSel('');
+      showToast('Palestra collegata');
+    } catch {
+      showToast('Errore nel collegamento della palestra');
+    }
+  }
+
   async function handleSaveVenue() {
     if (!managingFor) return;
     if (!venueForm.nome.trim()) { showToast('Inserisci il nome della palestra'); return; }
@@ -107,10 +133,14 @@ export default function OpponentsPage() {
       cap: venueForm.cap.trim() || null,
       citta: venueForm.citta.trim() || null,
       provincia: venueForm.provincia.trim().toUpperCase() || null,
-      avversario_id: managingFor,
     };
     try {
-      await saveVenue.mutateAsync({ id: editingVenueId, data });
+      if (editingVenueId) {
+        await saveVenue.mutateAsync({ id: editingVenueId, data });
+      } else {
+        const newId = await saveVenue.mutateAsync({ id: null, data });
+        await linkVenue.mutateAsync({ avversarioId: managingFor, venueId: newId });
+      }
       setEditingVenueId(null);
       setVenueForm(emptyVenueForm);
       showToast('Palestra salvata');
@@ -119,15 +149,18 @@ export default function OpponentsPage() {
     }
   }
 
-  async function handleDeleteVenue(id: string) {
-    const ok = await confirm('Eliminare questa palestra?');
+  async function handleUnlinkVenue(id: string) {
+    if (!managingFor) return;
+    const altri = altriAvversariDi(id, managingFor);
+    const nota = altri.length > 0 ? ` (resta collegata a: ${altri.join(', ')})` : ' (non resterà collegata a nessun altro avversario, ma la palestra rimane nell\'elenco generale)';
+    const ok = await confirm(`Rimuovere questa palestra da questo avversario?${nota}`);
     if (!ok) return;
     try {
-      await deleteVenue.mutateAsync(id);
+      await unlinkVenue.mutateAsync({ avversarioId: managingFor, venueId: id });
       if (editingVenueId === id) { setEditingVenueId(null); setVenueForm(emptyVenueForm); }
-      showToast('Palestra eliminata');
+      showToast('Palestra rimossa dall\'avversario');
     } catch {
-      showToast('Errore nella cancellazione');
+      showToast('Errore nella rimozione');
     }
   }
 
@@ -175,36 +208,95 @@ export default function OpponentsPage() {
         <div className="card">
           <h3>Palestre — {managing.nome}</h3>
           {managingVenuesList.length === 0 ? (
-            <div className="empty">Nessuna palestra inserita per questo avversario.</div>
+            <div className="empty">Nessuna palestra collegata a questo avversario.</div>
           ) : (
             <div className="event-list">
-              {managingVenuesList.map((v) => (
-                <div className="event" key={v.id}>
-                  <div className="event-main">
-                    <div className="event-date">{v.nome}</div>
-                    <div className="event-detail">
-                      {[v.indirizzo, v.cap, v.citta, v.provincia].filter(Boolean).join(', ') || <span className="muted">nessun indirizzo</span>}
+              {managingVenuesList.map((v) => {
+                const altri = altriAvversariDi(v.id, managing.id);
+                return (
+                  <div className="event" key={v.id}>
+                    <div className="event-main">
+                      <div className="event-date">{v.nome}</div>
+                      <div className="event-detail">
+                        {[v.indirizzo, v.cap, v.citta, v.provincia].filter(Boolean).join(', ') || <span className="muted">nessun indirizzo</span>}
+                      </div>
+                      {altri.length > 0 && (
+                        <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Condivisa anche con: {altri.join(', ')}</div>
+                      )}
+                    </div>
+                    <div className="event-actions">
+                      <a className="btn ghost small" href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer">Apri in Maps</a>
+                      <button className="btn ghost small" onClick={() => editVenue(v)}>Modifica</button>
+                      <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleUnlinkVenue(v.id)}>Rimuovi</button>
                     </div>
                   </div>
-                  <div className="event-actions">
-                    <a className="btn ghost small" href={mapsUrlForVenue(v)} target="_blank" rel="noopener noreferrer">Apri in Maps</a>
-                    <button className="btn ghost small" onClick={() => editVenue(v)}>Modifica</button>
-                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDeleteVenue(v.id)}>Elimina</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-          <div className="row" style={{ marginTop: 12, flexWrap: 'wrap' }}>
-            <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={venueForm.nome} onChange={(e) => setVenueForm({ ...venueForm, nome: e.target.value })} /></div>
-            <div className="field"><label>Indirizzo</label><input style={{ width: 200 }} value={venueForm.indirizzo} onChange={(e) => setVenueForm({ ...venueForm, indirizzo: e.target.value })} /></div>
-            <div className="field"><label>CAP</label><input style={{ width: 90 }} value={venueForm.cap} onChange={(e) => setVenueForm({ ...venueForm, cap: e.target.value })} /></div>
-            <div className="field"><label>Città</label><input style={{ width: 150 }} value={venueForm.citta} onChange={(e) => setVenueForm({ ...venueForm, citta: e.target.value })} /></div>
-            <div className="field"><label>Provincia</label><input style={{ width: 80 }} maxLength={2} value={venueForm.provincia} onChange={(e) => setVenueForm({ ...venueForm, provincia: e.target.value })} /></div>
-          </div>
+
+          {editingVenueId ? (
+            <>
+              <div className="row" style={{ marginTop: 14, flexWrap: 'wrap' }}>
+                <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={venueForm.nome} onChange={(e) => setVenueForm({ ...venueForm, nome: e.target.value })} /></div>
+                <div className="field"><label>Indirizzo</label><input style={{ width: 200 }} value={venueForm.indirizzo} onChange={(e) => setVenueForm({ ...venueForm, indirizzo: e.target.value })} /></div>
+                <div className="field"><label>CAP</label><input style={{ width: 90 }} value={venueForm.cap} onChange={(e) => setVenueForm({ ...venueForm, cap: e.target.value })} /></div>
+                <div className="field"><label>Città</label><input style={{ width: 150 }} value={venueForm.citta} onChange={(e) => setVenueForm({ ...venueForm, citta: e.target.value })} /></div>
+                <div className="field"><label>Provincia</label><input style={{ width: 80 }} maxLength={2} value={venueForm.provincia} onChange={(e) => setVenueForm({ ...venueForm, provincia: e.target.value })} /></div>
+              </div>
+              <div className="settings-actions">
+                <button className="btn ghost" onClick={() => { setEditingVenueId(null); setVenueForm(emptyVenueForm); }}>Annulla modifica</button>
+                <button className="btn" onClick={handleSaveVenue}>Aggiorna palestra</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="row" style={{ marginTop: 14, gap: 8 }}>
+                <button type="button" className={newVenueMode === 'scegli' ? 'btn small' : 'btn ghost small'} onClick={() => setNewVenueMode('scegli')}>Scegli da elenco esistente</button>
+                <button type="button" className={newVenueMode === 'nuova' ? 'btn small' : 'btn ghost small'} onClick={() => setNewVenueMode('nuova')}>+ Nuova palestra</button>
+              </div>
+
+              {newVenueMode === 'scegli' ? (
+                <div className="row" style={{ marginTop: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div className="field" style={{ flex: 1, minWidth: 240 }}>
+                    <label>Palestra</label>
+                    <select style={{ width: '100%' }} value={existingVenueSel} onChange={(e) => setExistingVenueSel(e.target.value)}>
+                      <option value="">— scegli palestra —</option>
+                      {venues
+                        .filter((v) => !managingVenuesList.some((mv) => mv.id === v.id))
+                        .sort((a, b) => a.nome.localeCompare(b.nome))
+                        .map((v) => {
+                          const altri = altriAvversariDi(v.id, managing.id);
+                          const luogo = [v.citta, v.provincia].filter(Boolean).join(' ');
+                          return (
+                            <option key={v.id} value={v.id}>
+                              {v.nome}{luogo ? ` (${luogo})` : ''}{altri.length > 0 ? ` — già con ${altri.join(', ')}` : ''}
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+                  <button className="btn" onClick={handleLinkExisting} disabled={!existingVenueSel}>Collega</button>
+                </div>
+              ) : (
+                <>
+                  <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+                    <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={venueForm.nome} onChange={(e) => setVenueForm({ ...venueForm, nome: e.target.value })} /></div>
+                    <div className="field"><label>Indirizzo</label><input style={{ width: 200 }} value={venueForm.indirizzo} onChange={(e) => setVenueForm({ ...venueForm, indirizzo: e.target.value })} /></div>
+                    <div className="field"><label>CAP</label><input style={{ width: 90 }} value={venueForm.cap} onChange={(e) => setVenueForm({ ...venueForm, cap: e.target.value })} /></div>
+                    <div className="field"><label>Città</label><input style={{ width: 150 }} value={venueForm.citta} onChange={(e) => setVenueForm({ ...venueForm, citta: e.target.value })} /></div>
+                    <div className="field"><label>Provincia</label><input style={{ width: 80 }} maxLength={2} value={venueForm.provincia} onChange={(e) => setVenueForm({ ...venueForm, provincia: e.target.value })} /></div>
+                  </div>
+                  <div className="settings-actions">
+                    <button className="btn" onClick={handleSaveVenue}>+ Aggiungi palestra</button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           <div className="settings-actions">
             <button className="btn ghost" onClick={closeVenueManager}>Chiudi</button>
-            <button className="btn" onClick={handleSaveVenue}>{editingVenueId ? 'Aggiorna palestra' : '+ Aggiungi palestra'}</button>
           </div>
         </div>
       )}
