@@ -62,6 +62,8 @@ export default function TrainingsPage() {
   const [singleConvocatiOpen, setSingleConvocatiOpen] = useState(false);
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
+  const [editingDetailsId, setEditingDetailsId] = useState<string | null>(null);
+  const [editingDetailsForm, setEditingDetailsForm] = useState({ data: '', orario: '', venueSel: '', custom: '' });
   const [openAttendanceIds, setOpenAttendanceIds] = useState<Set<string>>(new Set());
   const [openProgrammati, setOpenProgrammati] = useState(false);
   const [openInCorso, setOpenInCorso] = useState(false);
@@ -217,6 +219,39 @@ export default function TrainingsPage() {
     }
   }
 
+  function openEditDetails(t: Training) {
+    setEditingDetailsId(t.id);
+    setEditingDetailsForm({
+      data: t.data,
+      orario: t.orario,
+      venueSel: t.venue_id || (t.palestra_custom ? '__custom__' : ''),
+      custom: t.palestra_custom || '',
+    });
+  }
+
+  function closeEditDetails() {
+    setEditingDetailsId(null);
+  }
+
+  async function saveEditDetails(t: Training) {
+    const venue_id = editingDetailsForm.venueSel && editingDetailsForm.venueSel !== '__custom__' ? editingDetailsForm.venueSel : null;
+    const palestra_custom = editingDetailsForm.venueSel === '__custom__' ? editingDetailsForm.custom.trim() : null;
+    if (!editingDetailsForm.data || !editingDetailsForm.orario || (!venue_id && !palestra_custom)) {
+      showToast('Compila data, orario e palestra');
+      return;
+    }
+    try {
+      await updateTraining.mutateAsync({
+        id: t.id,
+        data: { data: editingDetailsForm.data, orario: editingDetailsForm.orario, venue_id, palestra_custom },
+      });
+      closeEditDetails();
+      showToast('Allenamento aggiornato');
+    } catch {
+      showToast('Errore nel salvataggio delle modifiche');
+    }
+  }
+
   async function handleDelete(id: string) {
     const ok = await confirm('Eliminare questo allenamento?');
     if (!ok) return;
@@ -316,6 +351,7 @@ export default function TrainingsPage() {
       .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
     const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
     const isEditingConvocati = editingConvocatiId === t.id;
+    const isEditingDetails = editingDetailsId === t.id;
     const isAttendanceOpen = openAttendanceIds.has(t.id);
     const isSvolto = t.data >= weekStart && t.data <= weekEnd && t.data < today;
     return (
@@ -328,7 +364,32 @@ export default function TrainingsPage() {
           <div className="event-detail">
             {t.orario} · {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
           </div>
-          {isEditingConvocati ? (
+          {isEditingDetails ? (
+            <div className="field" style={{ marginTop: 10 }}>
+              <div className="row">
+                <div className="field"><label>Data</label><input type="date" value={editingDetailsForm.data} onChange={(e) => setEditingDetailsForm({ ...editingDetailsForm, data: e.target.value })} /></div>
+                <div className="field">
+                  <label>Orario</label>
+                  <TimeRangeInput value={editingDetailsForm.orario} onChange={(v) => setEditingDetailsForm({ ...editingDetailsForm, orario: v })} />
+                </div>
+                <div className="field">
+                  <label>Palestra</label>
+                  <select style={{ width: 200 }} value={editingDetailsForm.venueSel} onChange={(e) => setEditingDetailsForm({ ...editingDetailsForm, venueSel: e.target.value })}>
+                    <option value="">— scegli palestra —</option>
+                    {trainingVenues.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
+                    <option value="__custom__">Altro (inserisci manualmente)</option>
+                  </select>
+                </div>
+                {editingDetailsForm.venueSel === '__custom__' && (
+                  <div className="field"><label>Nome palestra</label><input style={{ width: 180 }} value={editingDetailsForm.custom} onChange={(e) => setEditingDetailsForm({ ...editingDetailsForm, custom: e.target.value })} /></div>
+                )}
+              </div>
+              <div className="settings-actions">
+                <button className="btn ghost" onClick={closeEditDetails}>Annulla</button>
+                <button className="btn" onClick={() => saveEditDetails(t)}>Salva modifiche</button>
+              </div>
+            </div>
+          ) : isEditingConvocati ? (
             <div className="field" style={{ marginTop: 10 }}>
               <div className="row" style={{ alignItems: 'center', gap: 10 }}>
                 <label style={{ margin: 0 }}>Convocati</label>
@@ -369,8 +430,9 @@ export default function TrainingsPage() {
             </>
           )}
         </div>
-        {!isEditingConvocati && (
+        {!isEditingConvocati && !isEditingDetails && (
           <div className="event-actions">
+            <button className="btn ghost small" onClick={() => openEditDetails(t)}>Modifica</button>
             <button className="btn ghost small" onClick={() => openEditConvocati(t)}>Modifica convocati</button>
             <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(t.id)}>Elimina</button>
           </div>
