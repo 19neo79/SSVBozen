@@ -71,7 +71,7 @@ export default function MatchesPage() {
   const [editingDetailsId, setEditingDetailsId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     data: '', orario: '', casaTrasferta: 'Casa' as CasaTrasferta, categoria: 'U14' as Categoria,
-    avvSel: '', avvCustom: '', venueSel: '', venueCustom: '', amichevole: false,
+    avvSel: '', avvCustom: '', venueSel: '', venueCustom: '', amichevole: false, numeroGaraFipav: '',
   });
 
   useEffect(() => {
@@ -186,16 +186,6 @@ export default function MatchesPage() {
     }
   }
 
-  async function saveNumeroGara(m: Match, value: string) {
-    const v = value.trim() || null;
-    if (v === m.numero_gara_fipav) return;
-    try {
-      await updateMatch.mutateAsync({ id: m.id, data: { numero_gara_fipav: v } });
-    } catch {
-      showToast('Errore nel salvataggio del numero gara');
-    }
-  }
-
   function openEditDetails(m: Match) {
     setEditingConvocatiId(null);
     setEditingDetailsId(m.id);
@@ -209,6 +199,7 @@ export default function MatchesPage() {
       venueSel: m.venue_id || (m.luogo_custom ? '__custom__' : ''),
       venueCustom: m.luogo_custom || '',
       amichevole: m.amichevole,
+      numeroGaraFipav: m.numero_gara_fipav || '',
     });
   }
 
@@ -242,6 +233,7 @@ export default function MatchesPage() {
         data: {
           data: editForm.data, orario: editForm.orario, casa_trasferta: editForm.casaTrasferta, categoria: editForm.categoria,
           avversario: avversarioNome, avversario_id: avversarioId, venue_id, luogo_custom, amichevole: editForm.amichevole,
+          numero_gara_fipav: editForm.numeroGaraFipav.trim() || null,
         },
       });
       closeEditDetails();
@@ -509,6 +501,7 @@ export default function MatchesPage() {
                             <option value="U15">Under 15</option>
                           </select>
                         </div>
+                        <div className="field"><label>N. Gara FIPAV</label><input style={{ width: 130 }} value={editForm.numeroGaraFipav} onChange={(e) => setEditForm({ ...editForm, numeroGaraFipav: e.target.value })} /></div>
                         <label className="chk" style={{ alignSelf: 'flex-end', marginBottom: 2 }}>
                           <input type="checkbox" checked={editForm.amichevole} onChange={(e) => setEditForm({ ...editForm, amichevole: e.target.checked })} />
                           Amichevole
@@ -577,15 +570,8 @@ export default function MatchesPage() {
                         {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
                         {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
                       </div>
-                      <div className="field" style={{ marginTop: 6, maxWidth: 160 }}>
-                        <label style={{ fontSize: 11 }}>N. Gara FIPAV</label>
-                        <input
-                          key={`${m.id}-${m.numero_gara_fipav || ''}`}
-                          style={{ width: '100%' }}
-                          defaultValue={m.numero_gara_fipav || ''}
-                          placeholder="—"
-                          onBlur={(e) => saveNumeroGara(m, e.target.value)}
-                        />
+                      <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+                        N. Gara FIPAV: {m.numero_gara_fipav || '—'}
                       </div>
                     </>
                   )}
