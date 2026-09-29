@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveLocation } from '../lib/location';
-import { dayLabelShort, fmtISODate, todayISO } from '../lib/dates';
+import { dayLabelShort, fmtDateShort, fmtISODate, todayISO } from '../lib/dates';
 import type { PublicMatch, PublicSettingsBasic, PublicVenueBasic } from '../types/database';
 
 function currentMese(): string {
@@ -154,16 +154,25 @@ export default function PublicSeasonPage() {
                 <div className="event-list" style={{ marginTop: 0 }}>
                   {matches.map((m, i) => {
                     const loc = resolveLocation(m.venue_id, m.luogo_custom, data!.venues);
+                    const isU15 = (m.categoria || 'U14') === 'U15';
+                    const bg = isU15 ? 'var(--rosso)' : 'var(--blu)';
                     return (
-                      <div className="event match" key={`m-${i}`}>
+                      <div className="event match" key={`m-${i}`} style={{ background: bg, border: 'none' }}>
                         <div className="event-main">
-                          <div className="event-date">
-                            Partita
-                            <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
+                          <div className="event-date" style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {m.avversario}
+                            <span style={{ background: '#fff', color: bg, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', padding: '1px 7px', borderRadius: 999, flexShrink: 0 }}>
+                              {m.categoria || 'U14'}
+                            </span>
+                            <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', padding: '1px 7px', borderRadius: 999, flexShrink: 0 }}>
+                              {m.casa_trasferta}
+                            </span>
                           </div>
-                          <div className="event-detail">
-                            {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-                            {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                          <div className="event-detail" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                            {fmtDateShort(giorno)} · {m.orario} ·{' '}
+                            {loc.mapsUrl ? (
+                              <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'underline' }}>{loc.label}</a>
+                            ) : loc.label}
                           </div>
                         </div>
                       </div>
