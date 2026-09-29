@@ -82,6 +82,7 @@ export interface Match {
   motivi_assenza: Record<string, string>;
   assenti_confermati: string[];
   amichevole: boolean;
+  numero_gara_fipav: string | null;
   created_at: string;
 }
 

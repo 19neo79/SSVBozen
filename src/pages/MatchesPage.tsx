@@ -27,6 +27,7 @@ const MATCH_HEADER_MAP: Record<string, string> = {
   categoria: 'categoria', under: 'categoria', squadra: 'categoria',
   avversario: 'avversario', squadraavversaria: 'avversario',
   palestra: 'venue_name', luogo: 'venue_name', luogopalestra: 'venue_name', sede: 'venue_name',
+  ngarafipav: 'numero_gara_fipav', numerogarafipav: 'numero_gara_fipav', numerogara: 'numero_gara_fipav', garafipav: 'numero_gara_fipav',
 };
 
 function normalizeCasaTrasferta(str: string): CasaTrasferta {
@@ -59,6 +60,7 @@ export default function MatchesPage() {
   const [venueSel, setVenueSel] = useState('');
   const [venueCustom, setVenueCustom] = useState('');
   const [amichevole, setAmichevole] = useState(false);
+  const [numeroGaraFipav, setNumeroGaraFipav] = useState('');
   const [convocati, setConvocati] = useState<string[]>(roster.map((p) => p.id));
   const [editingConvocatiId, setEditingConvocatiId] = useState<string | null>(null);
   const [editingConvocatiSelection, setEditingConvocatiSelection] = useState<string[]>([]);
@@ -101,6 +103,7 @@ export default function MatchesPage() {
         data, orario, casa_trasferta: casaTrasferta, categoria,
         avversario: avversarioNome, avversario_id: avversarioId,
         venue_id, luogo_custom, convocati, presenze: [], amichevole,
+        numero_gara_fipav: numeroGaraFipav.trim() || null,
       });
       setOrario('10:00');
       setAvvSel('');
@@ -108,6 +111,7 @@ export default function MatchesPage() {
       setVenueSel('');
       setVenueCustom('');
       setAmichevole(false);
+      setNumeroGaraFipav('');
       showToast('Partita aggiunta');
     } catch {
       showToast('Errore nel salvataggio della partita');
@@ -167,6 +171,16 @@ export default function MatchesPage() {
     }
   }
 
+  async function saveNumeroGara(m: Match, value: string) {
+    const v = value.trim() || null;
+    if (v === m.numero_gara_fipav) return;
+    try {
+      await updateMatch.mutateAsync({ id: m.id, data: { numero_gara_fipav: v } });
+    } catch {
+      showToast('Errore nel salvataggio del numero gara');
+    }
+  }
+
   async function handleDelete(id: string) {
     const ok = await confirm('Eliminare questa partita?');
     if (!ok) return;
@@ -201,8 +215,8 @@ export default function MatchesPage() {
   }
 
   function downloadTemplate() {
-    const headers = ['Data', 'Orario', 'Casa/Trasferta', 'Categoria', 'Avversario', 'Palestra/Luogo'];
-    const example = ['21/09/2026', '10:00', 'Casa', 'U14', 'Volley Team San Giacomo', 'Palestra Firmian'];
+    const headers = ['Data', 'Orario', 'Casa/Trasferta', 'Categoria', 'Avversario', 'Palestra/Luogo', 'N. Gara FIPAV'];
+    const example = ['21/09/2026', '10:00', 'Casa', 'U14', 'Volley Team San Giacomo', 'Palestra Firmian', '123456'];
     const csv = headers.join(';') + '\n' + example.join(';');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -214,10 +228,10 @@ export default function MatchesPage() {
 
   function exportCSV() {
     if (matches.length === 0) { showToast('Nessuna partita da esportare'); return; }
-    const headers = ['Data', 'Orario', 'Casa/Trasferta', 'Categoria', 'Avversario', 'Palestra/Luogo'];
+    const headers = ['Data', 'Orario', 'Casa/Trasferta', 'Categoria', 'Avversario', 'Palestra/Luogo', 'N. Gara FIPAV'];
     const rows = matches.map((m) => [
       isoToItalian(m.data), m.orario || '', m.casa_trasferta || '', m.categoria || '', m.avversario || '',
-      resolveLocation(m.venue_id, m.luogo_custom, venues).label,
+      resolveLocation(m.venue_id, m.luogo_custom, venues).label, m.numero_gara_fipav || '',
     ]);
     downloadCSV('calendario_partite_export.csv', headers, rows);
   }
@@ -259,6 +273,7 @@ export default function MatchesPage() {
         casa_trasferta: normalizeCasaTrasferta(rec.casa_trasferta),
         categoria: normalizeCategoria(rec.categoria),
         avversario: avversarioNome, venue_id, luogo_custom, convocati: [], presenze: [],
+        numero_gara_fipav: rec.numero_gara_fipav || null,
       });
       added++;
     }
@@ -309,6 +324,7 @@ export default function MatchesPage() {
               <option value="U15">Under 15</option>
             </select>
           </div>
+          <div className="field"><label>N. Gara FIPAV</label><input style={{ width: 130 }} value={numeroGaraFipav} onChange={(e) => setNumeroGaraFipav(e.target.value)} /></div>
           <label className="chk" style={{ alignSelf: 'flex-end', marginBottom: 2 }}>
             <input type="checkbox" checked={amichevole} onChange={(e) => setAmichevole(e.target.checked)} />
             Amichevole
@@ -401,6 +417,16 @@ export default function MatchesPage() {
                   <div className="event-detail">
                     {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
                     {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                  </div>
+                  <div className="field" style={{ marginTop: 6, maxWidth: 160 }}>
+                    <label style={{ fontSize: 11 }}>N. Gara FIPAV</label>
+                    <input
+                      key={`${m.id}-${m.numero_gara_fipav || ''}`}
+                      style={{ width: '100%' }}
+                      defaultValue={m.numero_gara_fipav || ''}
+                      placeholder="—"
+                      onBlur={(e) => saveNumeroGara(m, e.target.value)}
+                    />
                   </div>
                   {isEditingConvocati ? (
                     <div className="field" style={{ marginTop: 10 }}>
