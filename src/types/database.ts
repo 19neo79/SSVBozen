@@ -83,7 +83,15 @@ export interface Match {
   assenti_confermati: string[];
   amichevole: boolean;
   numero_gara_fipav: string | null;
+  risultato_noi: number | null;
+  risultato_loro: number | null;
+  parziali: SetParziale[];
   created_at: string;
+}
+
+export interface SetParziale {
+  noi: number;
+  loro: number;
 }
 
 export interface Settings {
@@ -160,4 +168,7 @@ export interface PublicMatch {
   venue_id: string | null;
   luogo_custom: string | null;
   convocati: string[];
+  risultato_noi: number | null;
+  risultato_loro: number | null;
+  parziali: SetParziale[];
 }

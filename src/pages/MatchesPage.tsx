@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useRoster } from '../hooks/useRoster';
 import { useVenues } from '../hooks/useVenues';
@@ -18,7 +18,11 @@ import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
 import { isEligibleForCategoria } from '../lib/categoria';
-import type { CasaTrasferta, Categoria, Match } from '../types/database';
+import { esito, fmtParziali, hasRisultato, setVinti } from '../lib/risultato';
+import type { CasaTrasferta, Categoria, Match, SetParziale } from '../types/database';
+
+const MAX_SET = 5;
+const ESITO_COLORE = { Vinta: '#1e7a3c', Persa: 'var(--rosso-scuro)', Pari: 'var(--inchiostro-soft)' };
 
 const MATCH_HEADER_MAP: Record<string, string> = {
   data: 'data',
@@ -72,6 +76,10 @@ export default function MatchesPage() {
   const [editForm, setEditForm] = useState({
     data: '', orario: '', casaTrasferta: 'Casa' as CasaTrasferta, categoria: 'U14' as Categoria,
     avvSel: '', avvCustom: '', venueSel: '', venueCustom: '', amichevole: false, numeroGaraFipav: '',
+  });
+  const [editingRisultatoId, setEditingRisultatoId] = useState<string | null>(null);
+  const [risultatoForm, setRisultatoForm] = useState<{ sets: { noi: string; loro: string }[]; noi: string; loro: string }>({
+    sets: [], noi: '', loro: '',
   });
 
   useEffect(() => {
@@ -188,6 +196,7 @@ export default function MatchesPage() {
 
   function openEditDetails(m: Match) {
     setEditingConvocatiId(null);
+    setEditingRisultatoId(null);
     setEditingDetailsId(m.id);
     setEditForm({
       data: m.data,
@@ -243,6 +252,59 @@ export default function MatchesPage() {
     }
   }
 
+  function openEditRisultato(m: Match) {
+    setEditingConvocatiId(null);
+    setEditingDetailsId(null);
+    setEditingRisultatoId(m.id);
+    const sets = (m.parziali || []).map((s) => ({ noi: String(s.noi), loro: String(s.loro) }));
+    while (sets.length < MAX_SET) sets.push({ noi: '', loro: '' });
+    setRisultatoForm({
+      sets,
+      noi: m.risultato_noi != null ? String(m.risultato_noi) : '',
+      loro: m.risultato_loro != null ? String(m.risultato_loro) : '',
+    });
+  }
+
+  function closeEditRisultato() {
+    setEditingRisultatoId(null);
+  }
+
+  const risultatoCompilati = risultatoForm.sets.filter((s) => s.noi.trim() !== '' || s.loro.trim() !== '');
+  const risultatoParziali: SetParziale[] = risultatoCompilati.map((s) => ({ noi: Number(s.noi), loro: Number(s.loro) }));
+  const risultatoDaParziali = risultatoParziali.length > 0 ? setVinti(risultatoParziali) : null;
+
+  async function saveRisultato(m: Match) {
+    const isPunteggio = (v: string) => /^\d{1,2}$/.test(v.trim());
+    if (risultatoCompilati.some((s) => !isPunteggio(s.noi) || !isPunteggio(s.loro))) {
+      showToast('Ogni set deve avere entrambi i punteggi');
+      return;
+    }
+    if (risultatoParziali.some((s) => s.noi === s.loro)) {
+      showToast('Un set non può finire in parità');
+      return;
+    }
+    let risultato_noi: number | null = null;
+    let risultato_loro: number | null = null;
+    if (risultatoDaParziali) {
+      risultato_noi = risultatoDaParziali.noi;
+      risultato_loro = risultatoDaParziali.loro;
+    } else if (risultatoForm.noi.trim() !== '' || risultatoForm.loro.trim() !== '') {
+      if (!/^\d$/.test(risultatoForm.noi.trim()) || !/^\d$/.test(risultatoForm.loro.trim())) {
+        showToast('Inserisci i set vinti da entrambe le squadre');
+        return;
+      }
+      risultato_noi = Number(risultatoForm.noi);
+      risultato_loro = Number(risultatoForm.loro);
+    }
+    try {
+      await updateMatch.mutateAsync({ id: m.id, data: { risultato_noi, risultato_loro, parziali: risultatoParziali } });
+      closeEditRisultato();
+      showToast(risultato_noi == null ? 'Risultato cancellato' : 'Risultato salvato');
+    } catch {
+      showToast('Errore nel salvataggio del risultato');
+    }
+  }
+
   async function handleDelete(id: string) {
     const ok = await confirm('Eliminare questa partita?');
     if (!ok) return;
@@ -256,6 +318,7 @@ export default function MatchesPage() {
 
   function openEditConvocati(m: Match) {
     setEditingDetailsId(null);
+    setEditingRisultatoId(null);
     setEditingConvocatiId(m.id);
     setEditingConvocatiSelection(m.convocati || []);
   }
@@ -476,6 +539,7 @@ export default function MatchesPage() {
             const loc = resolveLocation(m.venue_id, m.luogo_custom, venues);
             const isEditingConvocati = editingConvocatiId === m.id;
             const isEditingDetails = editingDetailsId === m.id;
+            const isEditingRisultato = editingRisultatoId === m.id;
             return (
               <div className="event match" key={m.id}>
                 <div className="event-main">
@@ -573,9 +637,63 @@ export default function MatchesPage() {
                       <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
                         N. Gara FIPAV: {m.numero_gara_fipav || '—'}
                       </div>
+                      {hasRisultato(m) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                          <span style={{ background: ESITO_COLORE[esito(m)!], color: '#fff', fontSize: 12, fontWeight: 700, padding: '2px 9px', borderRadius: 999 }}>
+                            {esito(m)} {m.risultato_noi}–{m.risultato_loro}
+                          </span>
+                          {(m.parziali || []).length > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{fmtParziali(m.parziali)}</span>}
+                        </div>
+                      )}
                     </>
                   )}
-                  {isEditingDetails ? null : isEditingConvocati ? (
+                  {isEditingDetails ? null : isEditingRisultato ? (
+                    <div className="field" style={{ marginTop: 10 }}>
+                      <label>Risultato</label>
+                      <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                        Inserisci i punteggi dei set giocati (lascia vuoti quelli non giocati): il risultato finale si calcola da solo.
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'auto 64px auto 64px', gap: '6px 8px', alignItems: 'center', justifyContent: 'start' }}>
+                        <span />
+                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>SSV</span>
+                        <span />
+                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>Avv.</span>
+                        {risultatoForm.sets.map((s, i) => (
+                          <Fragment key={i}>
+                            <span className="muted" style={{ fontSize: 13 }}>Set {i + 1}</span>
+                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.noi}
+                              onChange={(e) => setRisultatoForm({ ...risultatoForm, sets: risultatoForm.sets.map((x, j) => (j === i ? { ...x, noi: e.target.value } : x)) })} />
+                            <span>–</span>
+                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.loro}
+                              onChange={(e) => setRisultatoForm({ ...risultatoForm, sets: risultatoForm.sets.map((x, j) => (j === i ? { ...x, loro: e.target.value } : x)) })} />
+                          </Fragment>
+                        ))}
+                      </div>
+                      {risultatoDaParziali ? (
+                        <div style={{ marginTop: 10, fontWeight: 700 }}>
+                          Risultato finale: SSV {risultatoDaParziali.noi} – {risultatoDaParziali.loro} {m.avversario}
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 12 }}>
+                          <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>Non hai i parziali? Inserisci solo i set vinti:</div>
+                          <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 13 }}>SSV</span>
+                            <input inputMode="numeric" style={{ width: 52, textAlign: 'center' }} value={risultatoForm.noi} onChange={(e) => setRisultatoForm({ ...risultatoForm, noi: e.target.value })} />
+                            <span>–</span>
+                            <input inputMode="numeric" style={{ width: 52, textAlign: 'center' }} value={risultatoForm.loro} onChange={(e) => setRisultatoForm({ ...risultatoForm, loro: e.target.value })} />
+                            <span style={{ fontSize: 13 }}>{m.avversario}</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="settings-actions">
+                        <button className="btn ghost" onClick={closeEditRisultato}>Annulla</button>
+                        {hasRisultato(m) && (
+                          <button className="btn ghost" onClick={() => setRisultatoForm({ sets: risultatoForm.sets.map(() => ({ noi: '', loro: '' })), noi: '', loro: '' })}>Svuota</button>
+                        )}
+                        <button className="btn" onClick={() => saveRisultato(m)}>Salva risultato</button>
+                      </div>
+                    </div>
+                  ) : isEditingConvocati ? (
                     <div className="field" style={{ marginTop: 10 }}>
                       <div className="row" style={{ alignItems: 'center', gap: 10 }}>
                         <label style={{ margin: 0 }}>Convocati</label>
@@ -617,8 +735,9 @@ export default function MatchesPage() {
                     </>
                   )}
                 </div>
-                {!isEditingConvocati && !isEditingDetails && (
+                {!isEditingConvocati && !isEditingDetails && !isEditingRisultato && (
                   <div className="event-actions">
+                    <button className="btn ghost small" onClick={() => openEditRisultato(m)}>Risultato</button>
                     <button className="btn ghost small" onClick={() => openEditDetails(m)}>Modifica</button>
                     <button className="btn ghost small" onClick={() => openEditConvocati(m)}>Modifica convocati</button>
                     <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>

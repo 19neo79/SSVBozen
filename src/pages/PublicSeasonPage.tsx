@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveLocation } from '../lib/location';
+import { esito, fmtParziali, hasRisultato } from '../lib/risultato';
 import { dayLabelShort, fmtDateShort, fmtISODate, todayISO } from '../lib/dates';
 import type { PublicMatch, PublicSettingsBasic, PublicVenueBasic } from '../types/database';
 
@@ -157,8 +158,8 @@ export default function PublicSeasonPage() {
                     const isU15 = (m.categoria || 'U14') === 'U15';
                     const bg = isU15 ? 'var(--rosso)' : 'var(--blu)';
                     return (
-                      <div className="event match" key={`m-${i}`} style={{ background: bg, border: 'none' }}>
-                        <div className="event-main">
+                      <div className="event match" key={`m-${i}`} style={{ background: bg, border: 'none', flexDirection: 'row', flexWrap: 'nowrap' }}>
+                        <div className="event-main" style={{ minWidth: 0 }}>
                           <div className="event-date" style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             {m.avversario}
                             <span style={{ background: '#fff', color: bg, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', padding: '1px 7px', borderRadius: 999, flexShrink: 0 }}>
@@ -174,7 +175,20 @@ export default function PublicSeasonPage() {
                               <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'underline' }}>{loc.label}</a>
                             ) : loc.label}
                           </div>
+                          {(m.parziali || []).length > 0 && (
+                            <div className="event-detail" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
+                              Set: {fmtParziali(m.parziali)}
+                            </div>
+                          )}
                         </div>
+                        {hasRisultato(m) && (
+                          <div style={{ color: '#fff', textAlign: 'center', alignSelf: 'center', flexShrink: 0 }}>
+                            <div style={{ fontFamily: "'Barlow Condensed'", fontWeight: 800, fontSize: 26, lineHeight: 1 }}>
+                              {m.risultato_noi}–{m.risultato_loro}
+                            </div>
+                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.9 }}>{esito(m)}</div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
