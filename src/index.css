@@ -1111,6 +1111,54 @@ table.matrix tbody tr:nth-child(even) th {
   color: #fff;
 }
 
+.form-dot.vinta {
+  background: #1a7a34;
+  color: #fff;
+}
+.form-dot.persa {
+  background: #fff;
+  border: 2px solid var(--rosso);
+  color: var(--rosso);
+}
+.form-dot.pari {
+  background: var(--panna);
+  border: 2px solid var(--inchiostro-soft);
+  color: var(--inchiostro-soft);
+}
+
+.seg-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.seg-tabs button {
+  font: inherit;
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-size: 15px;
+  padding: 8px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--inchiostro);
+  cursor: pointer;
+}
+.seg-tabs button + button {
+  border-left: 1px solid var(--linea);
+}
+.seg-tabs button.active {
+  background: var(--blu);
+  color: #fff;
+}
+
+.stats-table th:not(:first-child),
+.stats-table td.center {
+  text-align: center;
+  white-space: nowrap;
+}
+
 .cert-status-line {
   font-size: 15px;
   font-weight: 600;

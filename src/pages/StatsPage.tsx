@@ -5,6 +5,8 @@ import { useMatches } from '../hooks/useMatches';
 import { useVenues } from '../hooks/useVenues';
 import { useSettings } from '../hooks/useSettings';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
+import { StatCard } from '../components/ui/StatCard';
+import { RisultatiStats } from '../components/RisultatiStats';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
 import { isGiustificata, MOTIVI_ASSENZA } from '../lib/assenze';
@@ -38,6 +40,7 @@ export default function StatsPage() {
   const { data: venues = [] } = useVenues();
   const { data: settings } = useSettings();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'presenze' | 'risultati'>('presenze');
 
   const today = todayISO();
   const pastTrainings = useMemo(() => pastOnly(trainings, today), [trainings, today]);
@@ -124,70 +127,70 @@ export default function StatsPage() {
 
   return (
     <section>
-      <div className="row no-print" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
-        <button className="btn ghost small" onClick={handleExportExcel}>Esporta Excel (squadra + giocatori)</button>
+      <div className="row no-print" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+        <div className="seg-tabs">
+          <button type="button" className={tab === 'presenze' ? 'active' : ''} onClick={() => setTab('presenze')}>Presenze</button>
+          <button type="button" className={tab === 'risultati' ? 'active' : ''} onClick={() => setTab('risultati')}>Risultati</button>
+        </div>
+        {tab === 'presenze' && (
+          <button className="btn ghost small" onClick={handleExportExcel}>Esporta Excel (squadra + giocatori)</button>
+        )}
       </div>
-      <div className="stats-layout">
-        <div className="stats-sidebar">
-          <button
-            type="button"
-            className={`stats-player-btn stats-player-all${selectedId === null ? ' active' : ''}`}
-            onClick={() => setSelectedId(null)}
-          >
-            Tutta la squadra
-          </button>
-          <div className="stats-player-list">
-            {players.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`stats-player-btn${selectedId === p.id ? ' active' : ''}`}
-                onClick={() => setSelectedId(p.id)}
-              >
-                <span className="num-badge">{p.numero ?? '–'}</span>
-                <span style={{ flex: 1 }}>{p.cognome} {p.nome}</span>
-                <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
-              </button>
-            ))}
+      {tab === 'risultati' ? (
+        <RisultatiStats matches={matches} />
+      ) : (
+        <div className="stats-layout">
+          <div className="stats-sidebar">
+            <button
+              type="button"
+              className={`stats-player-btn stats-player-all${selectedId === null ? ' active' : ''}`}
+              onClick={() => setSelectedId(null)}
+            >
+              Tutta la squadra
+            </button>
+            <div className="stats-player-list">
+              {players.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`stats-player-btn${selectedId === p.id ? ' active' : ''}`}
+                  onClick={() => setSelectedId(p.id)}
+                >
+                  <span className="num-badge">{p.numero ?? '–'}</span>
+                  <span style={{ flex: 1 }}>{p.cognome} {p.nome}</span>
+                  <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="stats-main">
+            {selectedPlayer && selectedStats ? (
+              <PlayerStatsView player={selectedPlayer} stats={selectedStats} teamTotalRate={teamTotalRate} />
+            ) : (
+              <TeamStatsView
+                roster={roster}
+                trainingsTotal={trainings.length}
+                matchesTotal={matches.length}
+                teamOverview={teamOverview}
+                teamTrainingRate={teamTrainingRate}
+                teamMatchRate={teamMatchRate}
+                teamTotalRate={teamTotalRate}
+                perEventAvg={perEventAvg}
+                perfectCount={perfectCount}
+                eventXtremes={eventXtremes}
+                girone={girone}
+                monthly={monthly}
+                weekdayRows={weekdayRows}
+                ranking={ranking}
+                certCounts={certCounts}
+                fedeltaCount={fedeltaCount}
+              />
+            )}
           </div>
         </div>
-
-        <div className="stats-main">
-          {selectedPlayer && selectedStats ? (
-            <PlayerStatsView player={selectedPlayer} stats={selectedStats} teamTotalRate={teamTotalRate} />
-          ) : (
-            <TeamStatsView
-              roster={roster}
-              trainingsTotal={trainings.length}
-              matchesTotal={matches.length}
-              teamOverview={teamOverview}
-              teamTrainingRate={teamTrainingRate}
-              teamMatchRate={teamMatchRate}
-              teamTotalRate={teamTotalRate}
-              perEventAvg={perEventAvg}
-              perfectCount={perfectCount}
-              eventXtremes={eventXtremes}
-              girone={girone}
-              monthly={monthly}
-              weekdayRows={weekdayRows}
-              ranking={ranking}
-              certCounts={certCounts}
-              fedeltaCount={fedeltaCount}
-            />
-          )}
-        </div>
-      </div>
+      )}
     </section>
-  );
-}
-
-function StatCard({ label, value, sub, valueClass, cardClass }: { label: string; value: string | number; sub?: string; valueClass?: string; cardClass?: string }) {
-  return (
-    <div className={cardClass ? `stat-card ${cardClass}` : 'stat-card'}>
-      <div className={valueClass ? `stat-value ${valueClass}` : 'stat-value'}>{value}</div>
-      <div className="stat-label">{label}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
-    </div>
   );
 }
 
