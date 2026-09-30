@@ -10,7 +10,7 @@ import { RisultatiStats } from '../components/RisultatiStats';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
 import { isGiustificata, MOTIVI_ASSENZA } from '../lib/assenze';
-import { fmtDateShort, todayISO } from '../lib/dates';
+import { fmtDateShort, meseEsteso, todayISO } from '../lib/dates';
 import { exportStatsToExcel } from '../lib/excelExport';
 import {
   buildEventSummaries,
@@ -44,12 +44,6 @@ function Variazione({ da, a }: { da: number | null; a: number | null }) {
       {diff === 0 ? 'invariata' : `${diff > 0 ? '+' : '−'}${Math.abs(diff)} punti`}
     </span>
   );
-}
-
-function meseEsteso(key: string): string {
-  const [y, m] = key.split('-').map(Number);
-  const s = new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export default function StatsPage() {
@@ -140,6 +134,7 @@ export default function StatsPage() {
       perEventAvg,
       certCounts,
       fedeltaCount,
+      monthly,
     });
   }
 
@@ -155,7 +150,7 @@ export default function StatsPage() {
         )}
       </div>
       {tab === 'risultati' ? (
-        <RisultatiStats matches={matches} />
+        <RisultatiStats matches={matches} clubName={settings?.club_name || 'SSV Bozen Volley'} />
       ) : (
         <div className="stats-layout">
           <div className="stats-sidebar">

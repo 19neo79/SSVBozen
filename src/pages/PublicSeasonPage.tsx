@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveLocation } from '../lib/location';
 import { esito, fmtParziali, hasRisultato } from '../lib/risultato';
-import { dayLabelShort, fmtDateShort, fmtISODate, todayISO } from '../lib/dates';
+import { dayLabelShort, fmtDateShort, fmtISODate, meseEsteso, todayISO } from '../lib/dates';
 import type { PublicMatch, PublicSettingsBasic, PublicVenueBasic } from '../types/database';
 
 function currentMese(): string {
@@ -22,13 +22,6 @@ function shiftMese(mese: string, delta: number): string {
   const [y, m] = mese.split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
   return fmtISODate(d).slice(0, 7);
-}
-
-function meseLabel(mese: string): string {
-  const [y, m] = mese.split('-').map(Number);
-  const d = new Date(y, m - 1, 1);
-  const s = d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 interface Data {
@@ -128,7 +121,7 @@ export default function PublicSeasonPage() {
         <div className="card">
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <button className="btn ghost small" onClick={() => goToMese(shiftMese(mese, -1))}>← Mese precedente</button>
-            <h3 style={{ margin: 0 }}>{meseLabel(mese)}</h3>
+            <h3 style={{ margin: 0 }}>{meseEsteso(mese)}</h3>
             <button className="btn ghost small" onClick={() => goToMese(shiftMese(mese, 1))}>Mese successivo →</button>
           </div>
           {mese !== currentMese() && (
@@ -143,7 +136,7 @@ export default function PublicSeasonPage() {
         ) : error ? (
           <div className="card">Impossibile caricare il calendario. Riprova più tardi.</div>
         ) : matchesByDay.length === 0 ? (
-          <div className="empty">Nessuna partita programmata in {meseLabel(mese).toLowerCase()}.</div>
+          <div className="empty">Nessuna partita programmata in {meseEsteso(mese).toLowerCase()}.</div>
         ) : (
           <div className="event-list">
             {matchesByDay.map(({ data: giorno, matches }) => (

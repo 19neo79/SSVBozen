@@ -115,3 +115,10 @@ export function normalizeDateInput(raw: string | null | undefined): string {
 
   return '';
 }
+
+/** "2026-09" -> "Settembre 2026" */
+export function meseEsteso(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

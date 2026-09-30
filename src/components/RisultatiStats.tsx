@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { StatCard } from './ui/StatCard';
 import { fmtDateShort } from '../lib/dates';
+import { exportRisultatiToExcel } from '../lib/excelRisultati';
 import { computeRisultatiStats, decimale, perc, quoziente, type Bilancio } from '../lib/statsRisultati';
 import type { Categoria, Match } from '../types/database';
 
 type FiltroCategoria = 'Tutte' | Categoria;
 
-export function RisultatiStats({ matches }: { matches: Match[] }) {
+export function RisultatiStats({ matches, clubName }: { matches: Match[]; clubName: string }) {
   const [categoria, setCategoria] = useState<FiltroCategoria>('Tutte');
   const [amichevoli, setAmichevoli] = useState(false);
 
@@ -30,6 +31,19 @@ export function RisultatiStats({ matches }: { matches: Match[] }) {
         <input type="checkbox" checked={amichevoli} onChange={(e) => setAmichevoli(e.target.checked)} />
         Includi amichevoli
       </label>
+      {s.partite.length > 0 && (
+        <button
+          className="btn ghost small"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => exportRisultatiToExcel({
+            clubName,
+            s,
+            filtro: `${categoria === 'Tutte' ? 'Tutte le categorie' : categoria}${amichevoli ? ' con amichevoli' : ''}`,
+          })}
+        >
+          Esporta Excel (risultati)
+        </button>
+      )}
     </div>
   );
 

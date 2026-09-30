@@ -65,7 +65,7 @@ function aggiungi(b: Bilancio, p: PartitaGiocata) {
 }
 
 // Classifica FIPAV: 3 punti per 3-0/3-1, 2 per 3-2, 1 per 2-3, 0 per 1-3/0-3.
-function puntiFipav(noi: number, loro: number): number | null {
+export function puntiFipav(noi: number, loro: number): number | null {
   if (noi === 3) return loro === 2 ? 2 : 3;
   if (loro === 3) return noi === 2 ? 1 : 0;
   return null;

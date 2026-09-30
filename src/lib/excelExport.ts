@@ -1,9 +1,9 @@
 import type { Match, RosterPlayer, Training } from '../types/database';
-import type { PlayerAttendance, TeamOverview } from './stats';
+import type { PlayerAttendance, TeamMonthlyPoint, TeamOverview } from './stats';
 import { rate } from './stats';
 import { isGiustificata, motivoLabel } from './assenze';
 import { playerCategory } from './categoria';
-import { fmtDateShort, todayISO } from './dates';
+import { fmtDateShort, meseEsteso, todayISO } from './dates';
 import { resolveLocation, type Locatable } from './location';
 
 interface ExportParams {
@@ -20,6 +20,7 @@ interface ExportParams {
   perEventAvg: number | null;
   certCounts: Record<string, number>;
   fedeltaCount: number;
+  monthly: TeamMonthlyPoint[];
 }
 
 type Row = (string | number)[];
@@ -50,7 +51,7 @@ export async function exportStatsToExcel(params: ExportParams) {
   const XLSX = await import('xlsx');
   const {
     clubName, players, playerStats, teamOverview, pastTrainings, pastMatches, venues,
-    teamTrainingRate, teamMatchRate, teamTotalRate, perEventAvg, certCounts, fedeltaCount,
+    teamTrainingRate, teamMatchRate, teamTotalRate, perEventAvg, certCounts, fedeltaCount, monthly,
   } = params;
 
   const wb = XLSX.utils.book_new();
@@ -73,6 +74,15 @@ export async function exportStatsToExcel(params: ExportParams) {
   teamRows.push(['Totale', pct(teamTotalRate)]);
   teamRows.push(['Media per evento', pct(perEventAvg)]);
   teamRows.push(['Affidabilità di squadra', pct(teamOverview.reliabilityScore)]);
+  teamRows.push([]);
+  teamRows.push(['Presenze mese per mese']);
+  teamRows.push(['Mese', 'Allenamenti', 'Presenza allenamenti %', 'Partite', 'Presenza partite %', 'Presenti', 'Convocati', 'Presenza totale %']);
+  monthly.forEach((m) => {
+    teamRows.push([
+      meseEsteso(m.month), m.allenamenti.eventi, m.allenamenti.rate ?? '', m.partite.eventi, m.partite.rate ?? '',
+      m.totale.pres, m.totale.conv, m.totale.rate ?? '',
+    ]);
+  });
   teamRows.push([]);
   teamRows.push(['Certificati medici']);
   teamRows.push(['Scaduti', certCounts.scaduto || 0]);
