@@ -10,7 +10,7 @@ import { RisultatiStats } from '../components/RisultatiStats';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
 import { isGiustificata, MOTIVI_ASSENZA } from '../lib/assenze';
-import { fmtDateShort, todayISO } from '../lib/dates';
+import { fmtDateShort, fmtISODate, parseDateLocal, todayISO } from '../lib/dates';
 import { exportStatsToExcel } from '../lib/excelExport';
 import {
   buildEventSummaries,
@@ -18,7 +18,7 @@ import {
   computeTeamOverview,
   eventExtremes,
   gironeComparison,
-  monthlyTrainingTrend,
+  monthlyTrend,
   pastOnly,
   perfectAttendanceCount,
   rate,
@@ -27,11 +27,23 @@ import {
   type EventOutcome,
   type EventSummary,
   type GironeComparison,
-  type MonthlyPoint,
+  type TeamMonthlyPoint,
   type PlayerAttendance,
   type TeamOverview,
 } from '../lib/stats';
 import type { RosterPlayer } from '../types/database';
+
+function shiftDay(iso: string, giorni: number): string {
+  const d = parseDateLocal(iso);
+  d.setDate(d.getDate() + giorni);
+  return fmtISODate(d);
+}
+
+function meseEsteso(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function StatsPage() {
   const { data: roster = [] } = useRoster();
@@ -63,7 +75,7 @@ export default function StatsPage() {
     return map;
   }, [players, pastTrainings, pastMatches]);
 
-  const monthly = useMemo(() => monthlyTrainingTrend(pastTrainings), [pastTrainings]);
+  const monthly = useMemo(() => monthlyTrend(pastTrainings, pastMatches), [pastTrainings, pastMatches]);
 
   const certCounts = useMemo(() => {
     const counts: Record<string, number> = { scaduto: 0, 'in-scadenza': 0, valido: 0, assente: 0 };
@@ -333,7 +345,7 @@ function TeamStatsView({
   perfectCount: number;
   eventXtremes: { best: EventSummary | null; worst: EventSummary | null };
   girone: GironeComparison;
-  monthly: MonthlyPoint[];
+  monthly: TeamMonthlyPoint[];
   weekdayRows: { wd: number; label: string; conv: number; pres: number; rate: number | null }[];
   ranking: { player: RosterPlayer; stats: PlayerAttendance; totalRate: number | null }[];
   certCounts: Record<string, number>;
@@ -409,23 +421,69 @@ function TeamStatsView({
         </div>
       )}
 
-      {girone.splitDate && (
+      {monthly.length > 0 && (
         <div className="card">
-          <h3>Confronto primo vs secondo girone</h3>
-          <div className="muted" style={{ fontSize: 12.5, marginBottom: 4 }}>
-            Suddivisione automatica a metà tra il primo e l'ultimo evento della stagione (spartiacque: {fmtDateShort(girone.splitDate)}).
+          <h3>Presenze mese per mese</h3>
+          <div className="table-scroll">
+            <table className="stats-table compatta" style={{ minWidth: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left' }}>Mese</th>
+                  <th>All.</th>
+                  <th>% all.</th>
+                  <th>Partite</th>
+                  <th>% partite</th>
+                  <th>Totale</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthly.map((m) => (
+                  <tr key={m.month}>
+                    <td style={{ fontWeight: 700 }}>{meseEsteso(m.month)}</td>
+                    <td className="center">{m.allenamenti.eventi}</td>
+                    <td className={`center ${rateClass(m.allenamenti.rate)}`}>{m.allenamenti.rate !== null ? `${m.allenamenti.rate}%` : '—'}</td>
+                    <td className="center">{m.partite.eventi}</td>
+                    <td className={`center ${rateClass(m.partite.rate)}`}>{m.partite.rate !== null ? `${m.partite.rate}%` : '—'}</td>
+                    <td className={`center ${rateClass(m.totale.rate)}`} style={{ fontWeight: 700 }}>
+                      {m.totale.rate !== null ? `${m.totale.rate}%` : '—'}
+                      <span className="muted" style={{ display: 'block', fontWeight: 400, fontSize: 11.5 }}>{m.totale.pres}/{m.totale.conv}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="stat-cards">
-            <RateCard label="Girone 1" r={girone.girone1.rate} sub={`${girone.girone1.pres}/${girone.girone1.conv} convocazioni`} />
-            <RateCard label="Girone 2" r={girone.girone2.rate} sub={`${girone.girone2.pres}/${girone.girone2.conv} convocazioni`} />
+          <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+            All. = allenamenti svolti nel mese; le percentuali sono presenti ÷ convocati, contando solo gli eventi già svolti.
           </div>
+          {monthly.length >= 2 && (
+            <>
+              <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 16 }}>Andamento della presenza totale</div>
+              <LineChart points={monthly.map((m) => ({ label: m.label, rate: m.totale.rate }))} />
+            </>
+          )}
         </div>
       )}
 
-      {monthly.length > 0 && (
+      {girone.splitDate && girone.firstDate && girone.lastDate && (
         <div className="card">
-          <h3>Andamento mensile presenza allenamenti</h3>
-          <LineChart points={monthly.map((m) => ({ label: m.label, rate: m.rate }))} />
+          <h3>Prima e seconda metà del periodo</h3>
+          <div className="muted" style={{ fontSize: 12.5, marginBottom: 4 }}>
+            Presenza media (allenamenti e partite) nella prima e nella seconda metà del periodo con eventi svolti,
+            dal {fmtDateShort(girone.firstDate)} al {fmtDateShort(girone.lastDate)}: serve a capire se la partecipazione sta crescendo o calando.
+          </div>
+          <div className="stat-cards">
+            <RateCard label="Prima metà" r={girone.girone1.rate} sub={`fino al ${fmtDateShort(girone.splitDate)} · ${girone.girone1.pres}/${girone.girone1.conv} presenze`} />
+            <RateCard label="Seconda metà" r={girone.girone2.rate} sub={`dal ${fmtDateShort(shiftDay(girone.splitDate, 1))} · ${girone.girone2.pres}/${girone.girone2.conv} presenze`} />
+            {girone.girone1.rate !== null && girone.girone2.rate !== null && (
+              <StatCard
+                label="Variazione"
+                value={`${girone.girone2.rate - girone.girone1.rate > 0 ? '+' : ''}${girone.girone2.rate - girone.girone1.rate} punti`}
+                valueClass={girone.girone2.rate >= girone.girone1.rate ? 'rate-good' : 'rate-bad'}
+                sub={girone.girone2.rate >= girone.girone1.rate ? 'la partecipazione sta crescendo' : 'la partecipazione sta calando'}
+              />
+            )}
+          </div>
         </div>
       )}
 

@@ -1158,6 +1158,10 @@ table.matrix tbody tr:nth-child(even) th {
   text-align: center;
   white-space: nowrap;
 }
+.stats-table.compatta th,
+.stats-table.compatta td {
+  padding: 8px 6px;
+}
 
 .cert-status-line {
   font-size: 15px;

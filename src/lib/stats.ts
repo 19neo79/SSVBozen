@@ -71,12 +71,27 @@ export interface TeamOverview {
   reliabilityScore: number | null;
 }
 
+export interface MonthlySplit {
+  eventi: number;
+  conv: number;
+  pres: number;
+  rate: number | null;
+}
+
 export interface MonthlyPoint {
   month: string;
   label: string;
   conv: number;
   pres: number;
   rate: number | null;
+}
+
+export interface TeamMonthlyPoint {
+  month: string;
+  label: string;
+  allenamenti: MonthlySplit;
+  partite: MonthlySplit;
+  totale: MonthlySplit;
 }
 
 export interface EventSummary {
@@ -99,6 +114,8 @@ export interface GironeComparison {
   girone1: GironeSplit;
   girone2: GironeSplit;
   splitDate: string | null;
+  firstDate: string | null;
+  lastDate: string | null;
 }
 
 /** Percentuale presenze/convocazioni, o null se non ci sono state convocazioni. */
@@ -382,18 +399,34 @@ export function computeTeamOverview(pastTrainings: Training[], pastMatches: Matc
 }
 
 /** Andamento mensile della presenza agli allenamenti lungo la stagione. */
-export function monthlyTrainingTrend(pastTrainings: Training[]): MonthlyPoint[] {
-  const map = new Map<string, CategoriaSplit>();
-  pastTrainings.forEach((t) => {
-    const key = t.data.slice(0, 7);
-    if (!map.has(key)) map.set(key, { conv: 0, pres: 0 });
-    const e = map.get(key)!;
-    e.conv += (t.convocati || []).length;
-    e.pres += (t.presenze || []).length;
-  });
+export function monthlyTrend(pastTrainings: Training[], pastMatches: Match[]): TeamMonthlyPoint[] {
+  const vuoto = (): MonthlySplit => ({ eventi: 0, conv: 0, pres: 0, rate: null });
+  const map = new Map<string, { allenamenti: MonthlySplit; partite: MonthlySplit }>();
+  const add = (data: string, convocati: string[], presenze: string[], tipo: 'allenamenti' | 'partite') => {
+    const key = data.slice(0, 7);
+    if (!map.has(key)) map.set(key, { allenamenti: vuoto(), partite: vuoto() });
+    const e = map.get(key)![tipo];
+    e.eventi++;
+    e.conv += convocati.length;
+    e.pres += presenze.filter((id) => convocati.includes(id)).length;
+  };
+  pastTrainings.forEach((t) => add(t.data, t.convocati || [], t.presenze || [], 'allenamenti'));
+  pastMatches.forEach((m) => add(m.data, m.convocati || [], m.presenze || [], 'partite'));
+  const conRate = (x: MonthlySplit): MonthlySplit => ({ ...x, rate: rate(x.pres, x.conv) });
   return Array.from(map.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, v]) => ({ month: key, label: monthLabel(key), conv: v.conv, pres: v.pres, rate: rate(v.pres, v.conv) }));
+    .map(([key, v]) => ({
+      month: key,
+      label: monthLabel(key),
+      allenamenti: conRate(v.allenamenti),
+      partite: conRate(v.partite),
+      totale: conRate({
+        eventi: v.allenamenti.eventi + v.partite.eventi,
+        conv: v.allenamenti.conv + v.partite.conv,
+        pres: v.allenamenti.pres + v.partite.pres,
+        rate: null,
+      }),
+    }));
 }
 
 /** Elenco unificato di allenamenti+partite passati con conteggi, per trovare estremi ed eventi al 100%. */
@@ -430,7 +463,7 @@ export function perfectAttendanceCount(events: EventSummary[]): number {
 /** Confronto tra prima e seconda meta' della stagione (spaccata automaticamente a meta' tra il primo e l'ultimo evento). */
 export function gironeComparison(events: EventSummary[]): GironeComparison {
   if (events.length === 0) {
-    return { girone1: { conv: 0, pres: 0, rate: null }, girone2: { conv: 0, pres: 0, rate: null }, splitDate: null };
+    return { girone1: { conv: 0, pres: 0, rate: null }, girone2: { conv: 0, pres: 0, rate: null }, splitDate: null, firstDate: null, lastDate: null };
   }
   const first = parseDateLocal(events[0].data).getTime();
   const last = parseDateLocal(events[events.length - 1].data).getTime();
@@ -446,5 +479,7 @@ export function gironeComparison(events: EventSummary[]): GironeComparison {
     girone1: sum(events.filter((e) => e.data <= splitDate)),
     girone2: sum(events.filter((e) => e.data > splitDate)),
     splitDate,
+    firstDate: events[0].data,
+    lastDate: events[events.length - 1].data,
   };
 }
