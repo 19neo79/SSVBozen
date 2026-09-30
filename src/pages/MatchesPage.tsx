@@ -22,6 +22,21 @@ import { esito, fmtParziali, hasRisultato, setVinti } from '../lib/risultato';
 import type { CasaTrasferta, Categoria, Match, SetParziale } from '../types/database';
 
 const MAX_SET = 5;
+const SET_PER_VINCERE = 3;
+
+// Un set è bloccato se nei set precedenti una squadra ha già vinto la partita.
+function setBloccati(sets: { noi: string; loro: string }[]): boolean[] {
+  let noi = 0;
+  let loro = 0;
+  return sets.map((s) => {
+    const bloccato = noi >= SET_PER_VINCERE || loro >= SET_PER_VINCERE;
+    if (!bloccato && /^\d{1,2}$/.test(s.noi.trim()) && /^\d{1,2}$/.test(s.loro.trim())) {
+      if (Number(s.noi) > Number(s.loro)) noi++;
+      else if (Number(s.loro) > Number(s.noi)) loro++;
+    }
+    return bloccato;
+  });
+}
 const ESITO_COLORE = { Vinta: '#1e7a3c', Persa: 'var(--rosso-scuro)', Pari: 'var(--inchiostro-soft)' };
 
 const MATCH_HEADER_MAP: Record<string, string> = {
@@ -269,6 +284,14 @@ export default function MatchesPage() {
     setEditingRisultatoId(null);
   }
 
+  const risultatoBloccati = setBloccati(risultatoForm.sets);
+
+  function aggiornaSet(i: number, campo: 'noi' | 'loro', valore: string) {
+    const sets = risultatoForm.sets.map((x, j) => (j === i ? { ...x, [campo]: valore } : x));
+    const bloccati = setBloccati(sets);
+    setRisultatoForm({ ...risultatoForm, sets: sets.map((x, j) => (bloccati[j] ? { noi: '', loro: '' } : x)) });
+  }
+
   const risultatoCompilati = risultatoForm.sets.filter((s) => s.noi.trim() !== '' || s.loro.trim() !== '');
   const risultatoParziali: SetParziale[] = risultatoCompilati.map((s) => ({ noi: Number(s.noi), loro: Number(s.loro) }));
   const risultatoDaParziali = risultatoParziali.length > 0 ? setVinti(risultatoParziali) : null;
@@ -291,6 +314,12 @@ export default function MatchesPage() {
     } else if (risultatoForm.noi.trim() !== '' || risultatoForm.loro.trim() !== '') {
       if (!/^\d$/.test(risultatoForm.noi.trim()) || !/^\d$/.test(risultatoForm.loro.trim())) {
         showToast('Inserisci i set vinti da entrambe le squadre');
+        return;
+      }
+      const n = Number(risultatoForm.noi);
+      const l = Number(risultatoForm.loro);
+      if (n > SET_PER_VINCERE || l > SET_PER_VINCERE || (n === SET_PER_VINCERE && l === SET_PER_VINCERE)) {
+        showToast('Al meglio dei 5 set: al massimo 3 set vinti, e una sola squadra può arrivarci');
         return;
       }
       risultato_noi = Number(risultatoForm.noi);
@@ -660,12 +689,12 @@ export default function MatchesPage() {
                         <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>Avv.</span>
                         {risultatoForm.sets.map((s, i) => (
                           <Fragment key={i}>
-                            <span className="muted" style={{ fontSize: 13 }}>Set {i + 1}</span>
-                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.noi}
-                              onChange={(e) => setRisultatoForm({ ...risultatoForm, sets: risultatoForm.sets.map((x, j) => (j === i ? { ...x, noi: e.target.value } : x)) })} />
+                            <span className="muted" style={{ fontSize: 13, opacity: risultatoBloccati[i] ? 0.4 : 1 }}>Set {i + 1}</span>
+                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.noi} disabled={risultatoBloccati[i]}
+                              onChange={(e) => aggiornaSet(i, 'noi', e.target.value)} />
                             <span>–</span>
-                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.loro}
-                              onChange={(e) => setRisultatoForm({ ...risultatoForm, sets: risultatoForm.sets.map((x, j) => (j === i ? { ...x, loro: e.target.value } : x)) })} />
+                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.loro} disabled={risultatoBloccati[i]}
+                              onChange={(e) => aggiornaSet(i, 'loro', e.target.value)} />
                           </Fragment>
                         ))}
                       </div>
