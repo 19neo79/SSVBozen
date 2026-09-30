@@ -19,6 +19,7 @@ import {
   eventExtremes,
   monthlyTrend,
   pastOnly,
+  soloInRosa,
   perfectAttendanceCount,
   rate,
   rateClass,
@@ -56,8 +57,9 @@ export default function StatsPage() {
   const [tab, setTab] = useState<'presenze' | 'risultati'>('presenze');
 
   const today = todayISO();
-  const pastTrainings = useMemo(() => pastOnly(trainings, today), [trainings, today]);
-  const pastMatches = useMemo(() => pastOnly(matches, today), [matches, today]);
+  const rosterIds = useMemo(() => new Set(roster.map((p) => p.id)), [roster]);
+  const pastTrainings = useMemo(() => soloInRosa(pastOnly(trainings, today), rosterIds), [trainings, today, rosterIds]);
+  const pastMatches = useMemo(() => soloInRosa(pastOnly(matches, today), rosterIds), [matches, today, rosterIds]);
 
   const players = useMemo(
     () => [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome)),

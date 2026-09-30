@@ -124,6 +124,21 @@ function parseOrarioEndMinutes(orario: string | null | undefined): number | null
  * l'orario di fine dell'evento (le presenze di un allenamento/partita non ancora
  * terminati non sono ancora significative per le statistiche).
  */
+type ConPresenze = { convocati: string[]; presenze: string[]; ritardi: string[]; assenti_confermati: string[]; motivi_assenza: Record<string, string> };
+
+/** Tiene solo i dati degli atleti ancora in rosa, così chi è uscito non pesa sulle statistiche di squadra. */
+export function soloInRosa<T extends ConPresenze>(items: T[], rosterIds: Set<string>): T[] {
+  const tieni = (ids: string[] | null) => (ids || []).filter((id) => rosterIds.has(id));
+  return items.map((i) => ({
+    ...i,
+    convocati: tieni(i.convocati),
+    presenze: tieni(i.presenze),
+    ritardi: tieni(i.ritardi),
+    assenti_confermati: tieni(i.assenti_confermati),
+    motivi_assenza: Object.fromEntries(Object.entries(i.motivi_assenza || {}).filter(([id]) => rosterIds.has(id))),
+  }));
+}
+
 export function pastOnly<T extends { data: string; orario?: string | null }>(items: T[], today: string = todayISO()): T[] {
   return items.filter((i) => {
     if (i.data < today) return true;
