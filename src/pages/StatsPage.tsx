@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useRoster } from '../hooks/useRoster';
 import { useTrainings } from '../hooks/useTrainings';
 import { useMatches } from '../hooks/useMatches';
@@ -148,7 +149,10 @@ export default function StatsPage() {
           <button type="button" className={tab === 'risultati' ? 'active' : ''} onClick={() => setTab('risultati')}>Risultati</button>
         </div>
         {tab === 'presenze' && (
-          <button className="btn ghost small" onClick={handleExportExcel}>Esporta Excel (squadra + giocatori)</button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link className="btn small" to="/app/statistiche/report">Report del mese</Link>
+            <button className="btn ghost small" onClick={handleExportExcel}>Esporta Excel (squadra + giocatori)</button>
+          </div>
         )}
       </div>
       {tab === 'risultati' ? (

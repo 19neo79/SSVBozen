@@ -9,6 +9,7 @@ import TrainingsPage from './pages/TrainingsPage';
 import MatchesPage from './pages/MatchesPage';
 import WeekPlanPage from './pages/WeekPlanPage';
 import StatsPage from './pages/StatsPage';
+import ReportMensilePage from './pages/ReportMensilePage';
 import RosterPage from './pages/RosterPage';
 import StaffPage from './pages/StaffPage';
 import VenuesPage from './pages/VenuesPage';
@@ -35,6 +36,7 @@ function App() {
         <Route path="weekend" element={<MatchesPage />} />
         <Route path="piano" element={<WeekPlanPage />} />
         <Route path="statistiche" element={<StatsPage />} />
+        <Route path="statistiche/report" element={<ReportMensilePage />} />
         <Route path="rosa" element={<RosterPage />} />
         <Route path="staff" element={<StaffPage />} />
         <Route

@@ -693,6 +693,14 @@ tr:last-child td {
   display: none;
 }
 
+#stampa-report {
+  display: none;
+}
+@page report {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
   @page {
     size: A4 landscape;
@@ -1536,5 +1544,86 @@ table.matrix tbody tr:nth-child(even) th {
   .stats-sidebar {
     width: 100%;
     position: static;
+  }
+}
+
+.report-eyebrow {
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rosso);
+}
+.report-titolo {
+  font-family: 'Barlow Condensed';
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1.05;
+  margin: 2px 0 6px;
+}
+.report-voci {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.report-voci li::marker {
+  color: var(--rosso);
+}
+.report-commento {
+  border-left: 4px solid var(--blu);
+}
+.report-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.report-split > .card {
+  margin-top: 0;
+  min-width: 0;
+}
+.report-mensile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.report-mensile > .card {
+  margin-top: 0;
+}
+
+@media print {
+  #stampa-report {
+    display: block;
+    page: report;
+    font-size: 11px;
+  }
+  #stampa-report * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #stampa-report .report-mensile {
+    gap: 8px;
+  }
+  #stampa-report .card {
+    break-inside: avoid;
+    box-shadow: none;
+    padding: 10px 12px;
+  }
+  #stampa-report .card.report-break-ok {
+    break-inside: auto;
+  }
+  #stampa-report .report-split {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  #stampa-report .table-scroll {
+    overflow: visible;
+  }
+  #stampa-report tr {
+    break-inside: avoid;
   }
 }

@@ -172,3 +172,11 @@ export interface PublicMatch {
   risultato_loro: number | null;
   parziali: SetParziale[];
 }
+
+export interface ReportCommento {
+  mese: string;
+  in_breve: string;
+  da_seguire: string;
+  consigli: string;
+  updated_at: string;
+}
