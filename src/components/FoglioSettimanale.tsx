@@ -1,5 +1,7 @@
 import { dayLabelShort, fmtDateShort } from '../lib/dates';
 import { resolveLocation, type Locatable } from '../lib/location';
+import { esito, fmtParziali, hasRisultato } from '../lib/risultato';
+import type { SetParziale } from '../types/database';
 
 export interface FoglioTraining {
   data: string;
@@ -19,6 +21,9 @@ export interface FoglioMatch {
   luogo_custom: string | null;
   convocati: string[];
   amichevole?: boolean;
+  risultato_noi?: number | null;
+  risultato_loro?: number | null;
+  parziali?: SetParziale[];
 }
 
 export interface FoglioPlayer {
@@ -138,6 +143,12 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
                     </span>
                     <span className="sub">{m.orario} · {m.casa_trasferta}</span>
                     <span className="sub">vs {m.avversario}</span>
+                    {hasRisultato(m) && (
+                      <span className="sub" style={{ fontWeight: 700 }}>
+                        {esito(m)} {m.risultato_noi}–{m.risultato_loro}
+                        {(m.parziali || []).length > 0 && <span style={{ fontWeight: 400 }}> ({fmtParziali(m.parziali!)})</span>}
+                      </span>
+                    )}
                     <span className="sub">
                       {loc.mapsUrl ? <a className="maps-link" href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
                     </span>

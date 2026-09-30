@@ -11,7 +11,7 @@ export function fmtParziali(parziali: SetParziale[]): string {
   return parziali.map((s) => `${s.noi}-${s.loro}`).join(', ');
 }
 
-type ConRisultato = { risultato_noi: number | null; risultato_loro: number | null };
+type ConRisultato = { risultato_noi?: number | null; risultato_loro?: number | null };
 
 export function hasRisultato(m: ConRisultato): boolean {
   return m.risultato_noi != null && m.risultato_loro != null;
