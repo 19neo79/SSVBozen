@@ -31,19 +31,19 @@ export function RisultatiStats({ matches, clubName }: { matches: Match[]; clubNa
         <input type="checkbox" checked={amichevoli} onChange={(e) => setAmichevoli(e.target.checked)} />
         Includi amichevoli
       </label>
-      {s.partite.length > 0 && (
-        <button
-          className="btn ghost small"
-          style={{ marginLeft: 'auto' }}
-          onClick={() => exportRisultatiToExcel({
-            clubName,
-            s,
-            filtro: `${categoria === 'Tutte' ? 'Tutte le categorie' : categoria}${amichevoli ? ' con amichevoli' : ''}`,
-          })}
-        >
-          Esporta Excel (risultati)
-        </button>
-      )}
+      <button
+        className="btn ghost small"
+        style={{ marginLeft: 'auto' }}
+        disabled={s.partite.length === 0}
+        title={s.partite.length === 0 ? 'Disponibile quando ci sarà almeno un risultato inserito' : undefined}
+        onClick={() => exportRisultatiToExcel({
+          clubName,
+          s,
+          filtro: `${categoria === 'Tutte' ? 'Tutte le categorie' : categoria}${amichevoli ? ' con amichevoli' : ''}`,
+        })}
+      >
+        Esporta Excel (risultati)
+      </button>
     </div>
   );
 
@@ -53,7 +53,7 @@ export function RisultatiStats({ matches, clubName }: { matches: Match[]; clubNa
         {filtri}
         <div className="card">
           <div className="empty">
-            Nessun risultato inserito{categoria !== 'Tutte' ? ` per l'${categoria}` : ''}. Inseriscilo dalla scheda Partite con il pulsante &quot;Risultato&quot;.
+            Nessun risultato inserito{categoria !== 'Tutte' ? ` per l'${categoria}` : ''}. Inseriscilo dalla scheda Partite con il pulsante &quot;Risultato&quot;: da lì in poi qui compariranno le statistiche e potrai esportarle in Excel.
           </div>
         </div>
       </>
