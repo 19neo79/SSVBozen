@@ -1,6 +1,6 @@
 import type { Categoria, Match, Training } from '../types/database';
 import { isGiustificata } from './assenze';
-import { fmtISODate, parseDateLocal, todayISO } from './dates';
+import { parseDateLocal, todayISO } from './dates';
 
 /** Penalita' per una presenza in ritardo: vale 75% di una presenza puntuale. */
 const RITARDO_WEIGHT = 0.75;
@@ -102,20 +102,6 @@ export interface EventSummary {
   convocati: string[];
   presenti: string[];
   rate: number | null;
-}
-
-export interface GironeSplit {
-  conv: number;
-  pres: number;
-  rate: number | null;
-}
-
-export interface GironeComparison {
-  girone1: GironeSplit;
-  girone2: GironeSplit;
-  splitDate: string | null;
-  firstDate: string | null;
-  lastDate: string | null;
 }
 
 /** Percentuale presenze/convocazioni, o null se non ci sono state convocazioni. */
@@ -461,25 +447,3 @@ export function perfectAttendanceCount(events: EventSummary[]): number {
 }
 
 /** Confronto tra prima e seconda meta' della stagione (spaccata automaticamente a meta' tra il primo e l'ultimo evento). */
-export function gironeComparison(events: EventSummary[]): GironeComparison {
-  if (events.length === 0) {
-    return { girone1: { conv: 0, pres: 0, rate: null }, girone2: { conv: 0, pres: 0, rate: null }, splitDate: null, firstDate: null, lastDate: null };
-  }
-  const first = parseDateLocal(events[0].data).getTime();
-  const last = parseDateLocal(events[events.length - 1].data).getTime();
-  const splitDate = fmtISODate(new Date((first + last) / 2));
-
-  const sum = (list: EventSummary[]): GironeSplit => {
-    const conv = list.reduce((acc, e) => acc + e.convocati.length, 0);
-    const pres = list.reduce((acc, e) => acc + e.presenti.length, 0);
-    return { conv, pres, rate: rate(pres, conv) };
-  };
-
-  return {
-    girone1: sum(events.filter((e) => e.data <= splitDate)),
-    girone2: sum(events.filter((e) => e.data > splitDate)),
-    splitDate,
-    firstDate: events[0].data,
-    lastDate: events[events.length - 1].data,
-  };
-}

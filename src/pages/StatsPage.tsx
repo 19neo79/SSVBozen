@@ -10,14 +10,13 @@ import { RisultatiStats } from '../components/RisultatiStats';
 import { playerCategory } from '../lib/categoria';
 import { certStatusFor } from '../lib/certificato';
 import { isGiustificata, MOTIVI_ASSENZA } from '../lib/assenze';
-import { fmtDateShort, fmtISODate, parseDateLocal, todayISO } from '../lib/dates';
+import { fmtDateShort, todayISO } from '../lib/dates';
 import { exportStatsToExcel } from '../lib/excelExport';
 import {
   buildEventSummaries,
   computePlayerAttendance,
   computeTeamOverview,
   eventExtremes,
-  gironeComparison,
   monthlyTrend,
   pastOnly,
   perfectAttendanceCount,
@@ -26,17 +25,25 @@ import {
   weekdayLabel,
   type EventOutcome,
   type EventSummary,
-  type GironeComparison,
   type TeamMonthlyPoint,
   type PlayerAttendance,
   type TeamOverview,
 } from '../lib/stats';
 import type { RosterPlayer } from '../types/database';
 
-function shiftDay(iso: string, giorni: number): string {
-  const d = parseDateLocal(iso);
-  d.setDate(d.getDate() + giorni);
-  return fmtISODate(d);
+function prevMonthKey(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+
+function Variazione({ da, a }: { da: number | null; a: number | null }) {
+  if (da === null || a === null) return null;
+  const diff = a - da;
+  return (
+    <span className={diff > 0 ? 'rate-good' : diff < 0 ? 'rate-bad' : undefined} style={{ fontWeight: 700 }}>
+      {diff === 0 ? 'invariata' : `${diff > 0 ? '+' : '−'}${Math.abs(diff)} punti`}
+    </span>
+  );
 }
 
 function meseEsteso(key: string): string {
@@ -67,7 +74,6 @@ export default function StatsPage() {
   const eventSummaries = useMemo(() => buildEventSummaries(pastTrainings, pastMatches), [pastTrainings, pastMatches]);
   const eventXtremes = useMemo(() => eventExtremes(eventSummaries), [eventSummaries]);
   const perfectCount = useMemo(() => perfectAttendanceCount(eventSummaries), [eventSummaries]);
-  const girone = useMemo(() => gironeComparison(eventSummaries), [eventSummaries]);
 
   const playerStats = useMemo(() => {
     const map = new Map<string, PlayerAttendance>();
@@ -191,7 +197,6 @@ export default function StatsPage() {
                 perEventAvg={perEventAvg}
                 perfectCount={perfectCount}
                 eventXtremes={eventXtremes}
-                girone={girone}
                 monthly={monthly}
                 weekdayRows={weekdayRows}
                 ranking={ranking}
@@ -332,7 +337,7 @@ function MotivoBreakdown({ breakdown }: { breakdown: Record<string, number> }) {
 
 function TeamStatsView({
   roster, trainingsTotal, matchesTotal, teamOverview, teamTrainingRate, teamMatchRate, teamTotalRate,
-  perEventAvg, perfectCount, eventXtremes, girone, monthly, weekdayRows, ranking, certCounts, fedeltaCount,
+  perEventAvg, perfectCount, eventXtremes, monthly, weekdayRows, ranking, certCounts, fedeltaCount,
 }: {
   roster: RosterPlayer[];
   trainingsTotal: number;
@@ -344,7 +349,6 @@ function TeamStatsView({
   perEventAvg: number | null;
   perfectCount: number;
   eventXtremes: { best: EventSummary | null; worst: EventSummary | null };
-  girone: GironeComparison;
   monthly: TeamMonthlyPoint[];
   weekdayRows: { wd: number; label: string; conv: number; pres: number; rate: number | null }[];
   ranking: { player: RosterPlayer; stats: PlayerAttendance; totalRate: number | null }[];
@@ -421,6 +425,38 @@ function TeamStatsView({
         </div>
       )}
 
+      {monthly.length > 0 && (() => {
+        const ultimo = monthly[monthly.length - 1];
+        const precedente = monthly.find((m) => m.month === prevMonthKey(ultimo.month)) || null;
+        const stagione = monthly.reduce((acc, m) => ({ pres: acc.pres + m.totale.pres, conv: acc.conv + m.totale.conv }), { pres: 0, conv: 0 });
+        const rateStagione = rate(stagione.pres, stagione.conv);
+        return (
+          <div className="card">
+            <h3>{meseEsteso(ultimo.month)} a confronto</h3>
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 4 }}>
+              Presenza (allenamenti e partite) dell'ultimo mese con eventi svolti, confrontata con il mese precedente e con la media della stagione.
+            </div>
+            <div className="stat-cards">
+              <RateCard label={meseEsteso(ultimo.month)} r={ultimo.totale.rate} sub={`${ultimo.totale.pres}/${ultimo.totale.conv} presenze · ${ultimo.totale.eventi} ${ultimo.totale.eventi === 1 ? 'evento' : 'eventi'}`} />
+              <div className="stat-card">
+                <div className={`stat-value ${rateClass(precedente?.totale.rate ?? null)}`}>{precedente?.totale.rate != null ? `${precedente.totale.rate}%` : '—'}</div>
+                <div className="stat-label">{meseEsteso(prevMonthKey(ultimo.month))}</div>
+                <div className="stat-sub">
+                  {precedente ? <>{meseEsteso(ultimo.month)}: <Variazione da={precedente.totale.rate} a={ultimo.totale.rate} /></> : 'nessun evento svolto'}
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className={`stat-value ${rateClass(rateStagione)}`}>{rateStagione !== null ? `${rateStagione}%` : '—'}</div>
+                <div className="stat-label">Media stagione</div>
+                <div className="stat-sub">
+                  {monthly.length > 1 ? <>{meseEsteso(ultimo.month)}: <Variazione da={rateStagione} a={ultimo.totale.rate} /></> : 'per ora coincide con l\'unico mese svolto'}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {monthly.length > 0 && (
         <div className="card">
           <h3>Presenze mese per mese</h3>
@@ -462,28 +498,6 @@ function TeamStatsView({
               <LineChart points={monthly.map((m) => ({ label: m.label, rate: m.totale.rate }))} />
             </>
           )}
-        </div>
-      )}
-
-      {girone.splitDate && girone.firstDate && girone.lastDate && (
-        <div className="card">
-          <h3>Prima e seconda metà del periodo</h3>
-          <div className="muted" style={{ fontSize: 12.5, marginBottom: 4 }}>
-            Presenza media (allenamenti e partite) nella prima e nella seconda metà del periodo con eventi svolti,
-            dal {fmtDateShort(girone.firstDate)} al {fmtDateShort(girone.lastDate)}: serve a capire se la partecipazione sta crescendo o calando.
-          </div>
-          <div className="stat-cards">
-            <RateCard label="Prima metà" r={girone.girone1.rate} sub={`fino al ${fmtDateShort(girone.splitDate)} · ${girone.girone1.pres}/${girone.girone1.conv} presenze`} />
-            <RateCard label="Seconda metà" r={girone.girone2.rate} sub={`dal ${fmtDateShort(shiftDay(girone.splitDate, 1))} · ${girone.girone2.pres}/${girone.girone2.conv} presenze`} />
-            {girone.girone1.rate !== null && girone.girone2.rate !== null && (
-              <StatCard
-                label="Variazione"
-                value={`${girone.girone2.rate - girone.girone1.rate > 0 ? '+' : ''}${girone.girone2.rate - girone.girone1.rate} punti`}
-                valueClass={girone.girone2.rate >= girone.girone1.rate ? 'rate-good' : 'rate-bad'}
-                sub={girone.girone2.rate >= girone.girone1.rate ? 'la partecipazione sta crescendo' : 'la partecipazione sta calando'}
-              />
-            )}
-          </div>
         </div>
       )}
 
