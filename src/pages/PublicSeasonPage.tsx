@@ -109,10 +109,14 @@ export default function PublicSeasonPage() {
         </div>
 
         <div className="card">
-          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <button className="btn ghost small" onClick={() => goToMese(shiftMese(mese, -1))}>← Mese precedente</button>
-            <h3 style={{ margin: 0 }}>{meseEsteso(mese)}</h3>
-            <button className="btn ghost small" onClick={() => goToMese(shiftMese(mese, 1))}>Mese successivo →</button>
+          <div className="mese-nav">
+            <button className="btn ghost small" aria-label="Mese precedente" onClick={() => goToMese(shiftMese(mese, -1))}>
+              ←<span className="mese-nav-testo"> Mese precedente</span>
+            </button>
+            <h3>{meseEsteso(mese)}</h3>
+            <button className="btn ghost small" aria-label="Mese successivo" onClick={() => goToMese(shiftMese(mese, 1))}>
+              <span className="mese-nav-testo">Mese successivo </span>→
+            </button>
           </div>
           {mese !== currentMese() && (
             <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}>

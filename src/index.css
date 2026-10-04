@@ -1860,3 +1860,27 @@ table.matrix tbody tr:nth-child(even) th {
     break-inside: avoid;
   }
 }
+
+.mese-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mese-nav h3 {
+  margin: 0;
+  text-align: center;
+}
+.mese-nav .btn {
+  flex-shrink: 0;
+  width: auto;
+}
+@media (max-width: 640px) {
+  .mese-nav-testo {
+    display: none;
+  }
+  .mese-nav .btn {
+    font-size: 20px;
+    padding: 4px 16px;
+  }
+}
