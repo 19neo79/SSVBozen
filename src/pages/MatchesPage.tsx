@@ -12,13 +12,14 @@ import {
   useUpdateMatch,
 } from '../hooks/useMatches';
 import { TimeSingleInput } from '../components/ui/TimeInputs';
+import { MatchCardTop, bordoEsito } from '../components/MatchCardTop';
 import { PlayerChecks, SelectAllButton } from '../components/ui/PlayerChecks';
 import { AttendanceRow, type AttendanceState } from '../components/ui/AttendanceRow';
-import { fmtDate, isoToItalian, normalizeDateInput } from '../lib/dates';
+import { isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
 import { isEligibleForCategoria } from '../lib/categoria';
-import { esito, fmtParziali, hasRisultato, setVinti } from '../lib/risultato';
+import { hasRisultato, setVinti } from '../lib/risultato';
 import type { CasaTrasferta, Categoria, Match, SetParziale } from '../types/database';
 
 const MAX_SET = 5;
@@ -37,9 +38,6 @@ function setBloccati(sets: { noi: string; loro: string }[]): boolean[] {
     return bloccato;
   });
 }
-const ESITO_COLORE = { Vinta: '#1e7a3c', Persa: 'var(--rosso-scuro)', Pari: 'var(--inchiostro-soft)' };
-// Bordo laterale della card: giallo da disputare, poi colore dell'esito.
-const BORDO_ESITO = { Vinta: '#1a7a34', Persa: 'var(--rosso)', Pari: 'var(--inchiostro-soft)', daDisputare: '#e0a800' };
 
 const MATCH_HEADER_MAP: Record<string, string> = {
   data: 'data',
@@ -571,8 +569,13 @@ export default function MatchesPage() {
             const isEditingConvocati = editingConvocatiId === m.id;
             const isEditingDetails = editingDetailsId === m.id;
             const isEditingRisultato = editingRisultatoId === m.id;
+            const giocata = hasRisultato(m) && !isEditingDetails && !isEditingConvocati && !isEditingRisultato;
             return (
-              <div className="event match" key={m.id} style={{ borderLeftColor: BORDO_ESITO[esito(m) ?? 'daDisputare'] }}>
+              <div
+                className={`event match card-esito${giocata ? ' giocata' : ''}`}
+                key={m.id}
+                style={giocata ? { background: bordoEsito(m), borderColor: bordoEsito(m) } : { borderLeftColor: bordoEsito(m) }}
+              >
                 <div className="event-main">
                   {isEditingDetails ? (
                     <div className="field" style={{ marginTop: 4 }}>
@@ -656,28 +659,7 @@ export default function MatchesPage() {
                     </div>
                   ) : (
                     <>
-                      <div className={`match-band ${m.categoria === 'U15' ? 'u15' : 'u14'}`}>
-                        <div className="match-band-info">
-                          <div className="event-date">
-                            {fmtDate(m.data)}
-                            {m.amichevole && <span className="match-band-tag outline">Amichevole</span>}
-                          </div>
-                          <div className="event-detail">
-                            {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-                            {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                          </div>
-                          <div className="match-band-sub">N. Gara FIPAV: {m.numero_gara_fipav || '—'}</div>
-                        </div>
-                        <div className="match-band-cat">{m.categoria || 'U14'}</div>
-                      </div>
-                      {hasRisultato(m) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-                          <span style={{ background: ESITO_COLORE[esito(m)!], color: '#fff', fontSize: 12, fontWeight: 700, padding: '2px 9px', borderRadius: 999 }}>
-                            {esito(m)} {m.risultato_noi}–{m.risultato_loro}
-                          </span>
-                          {(m.parziali || []).length > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{fmtParziali(m.parziali)}</span>}
-                        </div>
-                      )}
+                      <MatchCardTop m={m} loc={loc} numeroGara={m.numero_gara_fipav} amichevole={m.amichevole} nascondiRisultato={!giocata} />
                     </>
                   )}
                   {isEditingDetails ? null : isEditingRisultato ? (
@@ -744,7 +726,7 @@ export default function MatchesPage() {
                       </div>
                     </div>
                   ) : (
-                    <>
+                    <div className="match-pannello">
                       <div className="event-conv">Convocati: {(m.convocati || []).length} — {(m.convocati || []).map(playerLabel).join(', ') || 'nessuno'}</div>
                       <div className="event-conv">Presenti: {presenze.length} / {(m.convocati || []).length}</div>
                       {convocatiPlayers.length === 0 ? (
@@ -765,17 +747,15 @@ export default function MatchesPage() {
                           ))}
                         </div>
                       )}
-                    </>
+                      <div className="event-actions match-azioni">
+                        <button className="btn ghost small" onClick={() => openEditRisultato(m)}>Risultato</button>
+                        <button className="btn ghost small" onClick={() => openEditDetails(m)}>Modifica</button>
+                        <button className="btn ghost small" onClick={() => openEditConvocati(m)}>Modifica convocati</button>
+                        <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                {!isEditingConvocati && !isEditingDetails && !isEditingRisultato && (
-                  <div className="event-actions">
-                    <button className="btn ghost small" onClick={() => openEditRisultato(m)}>Risultato</button>
-                    <button className="btn ghost small" onClick={() => openEditDetails(m)}>Modifica</button>
-                    <button className="btn ghost small" onClick={() => openEditConvocati(m)}>Modifica convocati</button>
-                    <button className="btn small" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(m.id)}>Elimina</button>
-                  </div>
-                )}
               </div>
             );
           })

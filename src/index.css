@@ -535,6 +535,95 @@ tr:last-child td {
   align-items: center;
   gap: 12px;
 }
+.card-esito.giocata .match-band {
+  border: 2px solid #fff;
+}
+.match-pannello {
+  margin-top: 10px;
+}
+.card-esito.giocata .match-pannello {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 14px;
+}
+.match-azioni {
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.tabellone {
+  color: #fff;
+  text-align: center;
+  margin: 16px 0 6px;
+}
+.tabellone-squadre {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 14px;
+}
+.tabellone-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 112px;
+}
+.tabellone-num {
+  background: #fff;
+  color: var(--esito);
+  border-radius: 10px;
+  width: 92px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 72px;
+  line-height: 1;
+}
+.tabellone-nome {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.tabellone-sep {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 48px;
+  line-height: 92px;
+}
+.tabellone-esito {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.tabellone-set {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tabellone-set span {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tabellone-set span.vinto {
+  background: #fff;
+  color: var(--esito);
+}
 .match-band-info {
   flex: 1;
   min-width: 0;

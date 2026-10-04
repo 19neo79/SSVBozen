@@ -171,6 +171,8 @@ export interface PublicMatch {
   risultato_noi: number | null;
   risultato_loro: number | null;
   parziali: SetParziale[];
+  numero_gara_fipav: string | null;
+  amichevole: boolean;
 }
 
 export interface ReportCommento {

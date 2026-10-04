@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { resolveLocation } from '../lib/location';
-import { esito, fmtParziali, hasRisultato } from '../lib/risultato';
-import { dayLabelShort, fmtDateShort, fmtISODate, meseEsteso, todayISO } from '../lib/dates';
+import { MatchCardTop, bordoEsito } from '../components/MatchCardTop';
+import { hasRisultato } from '../lib/risultato';
+import { fmtISODate, meseEsteso, todayISO } from '../lib/dates';
 import type { PublicMatch, PublicSettingsBasic, PublicVenueBasic } from '../types/database';
 
 function currentMese(): string {
@@ -77,20 +78,9 @@ export default function PublicSeasonPage() {
   const clubName = data?.clubName || 'SSV Bozen Volley';
   const today = todayISO();
 
-  const matchesByDay = (() => {
-    if (!data) return [] as { data: string; matches: PublicMatch[] }[];
-    const map = new Map<string, PublicMatch[]>();
-    data.matches.forEach((m) => {
-      if (!map.has(m.data)) map.set(m.data, []);
-      map.get(m.data)!.push(m);
-    });
-    return Array.from(map.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([data, matches]) => ({
-        data,
-        matches: matches.sort((a, b) => a.orario.localeCompare(b.orario)),
-      }));
-  })();
+  const partite = (data?.matches || [])
+    .slice()
+    .sort((a, b) => a.data.localeCompare(b.data) || a.orario.localeCompare(b.orario));
 
   return (
     <div style={{ background: 'var(--panna)', minHeight: '100vh' }}>
@@ -135,56 +125,18 @@ export default function PublicSeasonPage() {
           <div className="card">Caricamento…</div>
         ) : error ? (
           <div className="card">Impossibile caricare il calendario. Riprova più tardi.</div>
-        ) : matchesByDay.length === 0 ? (
+        ) : partite.length === 0 ? (
           <div className="empty">Nessuna partita programmata in {meseEsteso(mese).toLowerCase()}.</div>
         ) : (
           <div className="event-list">
-            {matchesByDay.map(({ data: giorno, matches }) => (
-              <div className="card" key={giorno} style={{ padding: '14px 18px' }}>
-                <div style={{ fontFamily: "'Barlow Condensed'", fontWeight: 800, fontSize: 17, marginBottom: 10 }}>
-                  {dayLabelShort(giorno)}
-                  {giorno === today && <span className="tag-svolto" style={{ marginLeft: 8 }}>Oggi</span>}
-                </div>
-                <div className="event-list" style={{ marginTop: 0 }}>
-                  {matches.map((m, i) => {
-                    const loc = resolveLocation(m.venue_id, m.luogo_custom, data!.venues);
-                    const isU15 = (m.categoria || 'U14') === 'U15';
-                    const bg = isU15 ? 'var(--rosso)' : 'var(--blu)';
-                    return (
-                      <div className="event match" key={`m-${i}`} style={{ background: bg, border: 'none', flexDirection: 'row', flexWrap: 'nowrap' }}>
-                        <div className="event-main" style={{ minWidth: 0 }}>
-                          <div className="event-date" style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            {m.avversario}
-                            <span style={{ background: '#fff', color: bg, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', padding: '1px 7px', borderRadius: 999, flexShrink: 0 }}>
-                              {m.categoria || 'U14'}
-                            </span>
-                            <span style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.7)', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', padding: '1px 7px', borderRadius: 999, flexShrink: 0 }}>
-                              {m.casa_trasferta}
-                            </span>
-                          </div>
-                          <div className="event-detail" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                            {fmtDateShort(giorno)} · {m.orario} ·{' '}
-                            {loc.mapsUrl ? (
-                              <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'underline' }}>{loc.label}</a>
-                            ) : loc.label}
-                          </div>
-                          {(m.parziali || []).length > 0 && (
-                            <div className="event-detail" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 2 }}>
-                              Set: {fmtParziali(m.parziali)}
-                            </div>
-                          )}
-                        </div>
-                        {hasRisultato(m) && (
-                          <div style={{ color: '#fff', textAlign: 'center', alignSelf: 'center', flexShrink: 0 }}>
-                            <div style={{ fontFamily: "'Barlow Condensed'", fontWeight: 800, fontSize: 26, lineHeight: 1 }}>
-                              {m.risultato_noi}–{m.risultato_loro}
-                            </div>
-                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', opacity: 0.9 }}>{esito(m)}</div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+            {partite.map((m) => (
+              <div
+                className={`event match card-esito${hasRisultato(m) ? ' giocata' : ''}`}
+                key={m.id}
+                style={hasRisultato(m) ? { background: bordoEsito(m), borderColor: bordoEsito(m) } : { borderLeftColor: bordoEsito(m) }}
+              >
+                <div className="event-main">
+                  <MatchCardTop m={m} loc={resolveLocation(m.venue_id, m.luogo_custom, data!.venues)} numeroGara={m.numero_gara_fipav} amichevole={m.amichevole} oggi={m.data === today} />
                 </div>
               </div>
             ))}
