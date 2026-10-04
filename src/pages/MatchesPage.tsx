@@ -657,16 +657,18 @@ export default function MatchesPage() {
                   ) : (
                     <>
                       <div className={`match-band ${m.categoria === 'U15' ? 'u15' : 'u14'}`}>
-                        <div className="event-date">
-                          {fmtDate(m.data)}
-                          <span className="match-band-tag">{m.categoria || 'U14'}</span>
-                          {m.amichevole && <span className="match-band-tag outline">Amichevole</span>}
+                        <div className="match-band-info">
+                          <div className="event-date">
+                            {fmtDate(m.data)}
+                            {m.amichevole && <span className="match-band-tag outline">Amichevole</span>}
+                          </div>
+                          <div className="event-detail">
+                            {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
+                            {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                          </div>
+                          <div className="match-band-sub">N. Gara FIPAV: {m.numero_gara_fipav || '—'}</div>
                         </div>
-                        <div className="event-detail">
-                          {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-                          {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                        </div>
-                        <div className="match-band-sub">N. Gara FIPAV: {m.numero_gara_fipav || '—'}</div>
+                        <div className="match-band-cat">{m.categoria || 'U14'}</div>
                       </div>
                       {hasRisultato(m) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>

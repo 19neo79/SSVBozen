@@ -531,6 +531,22 @@ tr:last-child td {
   border-radius: 6px;
   padding: 9px 12px;
   color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.match-band-info {
+  flex: 1;
+  min-width: 0;
+}
+.match-band-cat {
+  flex-shrink: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: #fff;
 }
 .match-band.u14 {
   background: var(--blu);
@@ -564,12 +580,6 @@ tr:last-child td {
   border-radius: 999px;
   background: #fff;
   color: var(--inchiostro);
-}
-.match-band.u14 .match-band-tag:not(.outline) {
-  color: var(--blu);
-}
-.match-band.u15 .match-band-tag:not(.outline) {
-  color: var(--rosso);
 }
 .match-band-tag.outline {
   background: rgba(255, 255, 255, 0.18);
