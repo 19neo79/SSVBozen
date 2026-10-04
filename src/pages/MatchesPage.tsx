@@ -19,7 +19,7 @@ import { isoToItalian, normalizeDateInput } from '../lib/dates';
 import { downloadCSV, detectDelimiter, normalizeHeader, parseCSVLine, readCsvFile } from '../lib/csv';
 import { resolveLocation } from '../lib/location';
 import { isEligibleForCategoria } from '../lib/categoria';
-import { hasRisultato, setVinti } from '../lib/risultato';
+import { erroreSet, hasRisultato, setVinti } from '../lib/risultato';
 import type { CasaTrasferta, Categoria, Match, SetParziale } from '../types/database';
 
 const MAX_SET = 5;
@@ -302,8 +302,14 @@ export default function MatchesPage() {
       showToast('Ogni set deve avere entrambi i punteggi');
       return;
     }
-    if (risultatoParziali.some((s) => s.noi === s.loro)) {
-      showToast('Un set non può finire in parità');
+    const ultimoCompilato = risultatoForm.sets.map((x) => x.noi.trim() !== '' || x.loro.trim() !== '').lastIndexOf(true);
+    if (risultatoForm.sets.slice(0, ultimoCompilato + 1).some((x) => x.noi.trim() === '' && x.loro.trim() === '')) {
+      showToast('Compila i set in ordine, senza lasciarne vuoti in mezzo');
+      return;
+    }
+    const errore = risultatoParziali.map((x, i) => erroreSet(x, i + 1)).find(Boolean);
+    if (errore) {
+      showToast(errore.charAt(0).toUpperCase() + errore.slice(1));
       return;
     }
     let risultato_noi: number | null = null;
