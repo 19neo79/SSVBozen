@@ -307,7 +307,10 @@ export default function MatchesPage() {
       showToast('Compila i set in ordine, senza lasciarne vuoti in mezzo');
       return;
     }
-    const errore = risultatoParziali.map((x, i) => erroreSet(x, i + 1)).find(Boolean);
+    // Il messaggio mostra il set nell'ordine in cui è stato inserito (casa-ospite).
+    const errore = risultatoParziali
+      .map((x, i) => erroreSet(m.casa_trasferta === 'Trasferta' ? { noi: x.loro, loro: x.noi } : x, i + 1))
+      .find(Boolean);
     if (errore) {
       showToast(errore.charAt(0).toUpperCase() + errore.slice(1));
       return;
@@ -576,6 +579,9 @@ export default function MatchesPage() {
             const isEditingDetails = editingDetailsId === m.id;
             const isEditingRisultato = editingRisultatoId === m.id;
             const giocata = hasRisultato(m) && !isEditingDetails && !isEditingConvocati && !isEditingRisultato;
+            // Nel modulo del risultato i punti si inseriscono come sul referto: prima la squadra di casa.
+            const inCasa = m.casa_trasferta !== 'Trasferta';
+            const colonne: ('noi' | 'loro')[] = inCasa ? ['noi', 'loro'] : ['loro', 'noi'];
             return (
               <div
                 className={`event match card-esito${giocata ? ' giocata' : ''}`}
@@ -676,33 +682,43 @@ export default function MatchesPage() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'auto 64px auto 64px', gap: '6px 8px', alignItems: 'center', justifyContent: 'start' }}>
                         <span />
-                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>SSV</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center' }}>{inCasa ? 'SSV' : 'Avv.'}</span>
                         <span />
-                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>Avv.</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>{inCasa ? 'Avv.' : 'SSV'}</span>
                         {risultatoForm.sets.map((s, i) => (
                           <Fragment key={i}>
                             <span className="muted" style={{ fontSize: 13, opacity: risultatoBloccati[i] ? 0.4 : 1 }}>Set {i + 1}</span>
-                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.noi} disabled={risultatoBloccati[i]}
-                              onChange={(e) => aggiornaSet(i, 'noi', e.target.value)} />
-                            <span>–</span>
-                            <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s.loro} disabled={risultatoBloccati[i]}
-                              onChange={(e) => aggiornaSet(i, 'loro', e.target.value)} />
+                            {colonne.map((lato, k) => (
+                              <Fragment key={lato}>
+                                {k === 1 && <span>–</span>}
+                                <input inputMode="numeric" style={{ width: 64, textAlign: 'center' }} value={s[lato]} disabled={risultatoBloccati[i]}
+                                  aria-label={`Set ${i + 1}, punti ${lato === 'noi' ? 'SSV' : m.avversario}`}
+                                  onChange={(e) => aggiornaSet(i, lato, e.target.value)} />
+                              </Fragment>
+                            ))}
                           </Fragment>
                         ))}
                       </div>
                       {risultatoDaParziali ? (
                         <div style={{ marginTop: 10, fontWeight: 700 }}>
-                          Risultato finale: SSV {risultatoDaParziali.noi} – {risultatoDaParziali.loro} {m.avversario}
+                          Risultato finale: {inCasa
+                            ? `SSV ${risultatoDaParziali.noi} – ${risultatoDaParziali.loro} ${m.avversario}`
+                            : `${m.avversario} ${risultatoDaParziali.loro} – ${risultatoDaParziali.noi} SSV`}
                         </div>
                       ) : (
                         <div style={{ marginTop: 12 }}>
                           <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>Non hai i parziali? Inserisci solo i set vinti:</div>
                           <div className="row" style={{ alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 13 }}>SSV</span>
-                            <input inputMode="numeric" style={{ width: 52, textAlign: 'center' }} value={risultatoForm.noi} onChange={(e) => setRisultatoForm({ ...risultatoForm, noi: e.target.value })} />
-                            <span>–</span>
-                            <input inputMode="numeric" style={{ width: 52, textAlign: 'center' }} value={risultatoForm.loro} onChange={(e) => setRisultatoForm({ ...risultatoForm, loro: e.target.value })} />
-                            <span style={{ fontSize: 13 }}>{m.avversario}</span>
+                            <span style={{ fontSize: 13 }}>{inCasa ? 'SSV' : m.avversario}</span>
+                            {colonne.map((lato, k) => (
+                              <Fragment key={lato}>
+                                {k === 1 && <span>–</span>}
+                                <input inputMode="numeric" style={{ width: 52, textAlign: 'center' }} value={risultatoForm[lato]}
+                                  aria-label={`Set vinti ${lato === 'noi' ? 'SSV' : m.avversario}`}
+                                  onChange={(e) => setRisultatoForm({ ...risultatoForm, [lato]: e.target.value })} />
+                              </Fragment>
+                            ))}
+                            <span style={{ fontSize: 13 }}>{inCasa ? m.avversario : 'SSV'}</span>
                           </div>
                         </div>
                       )}
