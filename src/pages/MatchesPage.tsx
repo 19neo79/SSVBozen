@@ -38,6 +38,8 @@ function setBloccati(sets: { noi: string; loro: string }[]): boolean[] {
   });
 }
 const ESITO_COLORE = { Vinta: '#1e7a3c', Persa: 'var(--rosso-scuro)', Pari: 'var(--inchiostro-soft)' };
+// Bordo laterale della card: giallo da disputare, poi colore dell'esito.
+const BORDO_ESITO = { Vinta: '#1a7a34', Persa: 'var(--rosso)', Pari: 'var(--inchiostro-soft)', daDisputare: '#e0a800' };
 
 const MATCH_HEADER_MAP: Record<string, string> = {
   data: 'data',
@@ -570,7 +572,7 @@ export default function MatchesPage() {
             const isEditingDetails = editingDetailsId === m.id;
             const isEditingRisultato = editingRisultatoId === m.id;
             return (
-              <div className="event match" key={m.id}>
+              <div className="event match" key={m.id} style={{ borderLeftColor: BORDO_ESITO[esito(m) ?? 'daDisputare'] }}>
                 <div className="event-main">
                   {isEditingDetails ? (
                     <div className="field" style={{ marginTop: 4 }}>
@@ -654,17 +656,17 @@ export default function MatchesPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="event-date">
-                        {fmtDate(m.data)}
-                        <span className={`tag-categoria ${(m.categoria || 'U14').toLowerCase()}`} style={{ marginLeft: 0 }}>{m.categoria || 'U14'}</span>
-                        {m.amichevole && <span className="tag-svolto">Amichevole</span>}
-                      </div>
-                      <div className="event-detail">
-                        {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-                        {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
-                      </div>
-                      <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
-                        N. Gara FIPAV: {m.numero_gara_fipav || '—'}
+                      <div className={`match-band ${m.categoria === 'U15' ? 'u15' : 'u14'}`}>
+                        <div className="event-date">
+                          {fmtDate(m.data)}
+                          <span className="match-band-tag">{m.categoria || 'U14'}</span>
+                          {m.amichevole && <span className="match-band-tag outline">Amichevole</span>}
+                        </div>
+                        <div className="event-detail">
+                          {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
+                          {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+                        </div>
+                        <div className="match-band-sub">N. Gara FIPAV: {m.numero_gara_fipav || '—'}</div>
                       </div>
                       {hasRisultato(m) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>

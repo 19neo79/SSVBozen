@@ -527,6 +527,55 @@ tr:last-child td {
 .event.match {
   border-left-color: var(--rosso);
 }
+.match-band {
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: #fff;
+}
+.match-band.u14 {
+  background: var(--blu);
+}
+.match-band.u15 {
+  background: var(--rosso);
+}
+.match-band .event-date {
+  color: #fff;
+  flex-wrap: wrap;
+}
+.match-band .event-detail {
+  color: rgba(255, 255, 255, 0.92);
+}
+.match-band a {
+  color: #fff;
+  text-decoration: underline;
+}
+.match-band-sub {
+  font-size: 12.5px;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.match-band-tag {
+  display: inline-block;
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--inchiostro);
+}
+.match-band.u14 .match-band-tag:not(.outline) {
+  color: var(--blu);
+}
+.match-band.u15 .match-band-tag:not(.outline) {
+  color: var(--rosso);
+}
+.match-band-tag.outline {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
 .event-main {
   flex: 1;
   min-width: 220px;
