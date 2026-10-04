@@ -33,6 +33,11 @@ export function MatchCardTop({ m, loc, numeroGara, amichevole, oggi, nascondiRis
   nascondiRisultato?: boolean;
 }) {
   const giorno = parseDateLocal(m.data);
+  // Come nei referti FIPAV: squadra di casa a sinistra, anche nei parziali.
+  const inCasa = m.casa_trasferta !== 'Trasferta';
+  const noi = { nome: 'SSV Bozen', punti: m.risultato_noi };
+  const loro = { nome: m.avversario, punti: m.risultato_loro };
+  const [casa, ospite] = inCasa ? [noi, loro] : [loro, noi];
   return (
     <>
       <div className={`match-band ${m.categoria === 'U15' ? 'u15' : 'u14'}`}>
@@ -65,20 +70,22 @@ export function MatchCardTop({ m, loc, numeroGara, amichevole, oggi, nascondiRis
         <div className="tabellone" style={{ '--esito': bordoEsito(m) } as CSSProperties}>
           <div className="tabellone-squadre">
             <div className="tabellone-box">
-              <div className="tabellone-num">{m.risultato_noi}</div>
-              <div className="tabellone-nome">SSV Bozen</div>
+              <div className="tabellone-num">{casa.punti}</div>
+              <div className="tabellone-nome">{casa.nome}</div>
             </div>
             <div className="tabellone-sep">–</div>
             <div className="tabellone-box">
-              <div className="tabellone-num">{m.risultato_loro}</div>
-              <div className="tabellone-nome">{m.avversario}</div>
+              <div className="tabellone-num">{ospite.punti}</div>
+              <div className="tabellone-nome">{ospite.nome}</div>
             </div>
           </div>
           <div className="tabellone-esito">{esito(m)}</div>
           {(m.parziali || []).length > 0 && (
             <div className="tabellone-set">
               {m.parziali.map((p, i) => (
-                <span key={i} className={p.noi > p.loro ? 'vinto' : undefined} title={`${i + 1}° set`}>{p.noi}-{p.loro}</span>
+                <span key={i} className={p.noi > p.loro ? 'vinto' : undefined} title={`${i + 1}° set`}>
+                  {inCasa ? `${p.noi}-${p.loro}` : `${p.loro}-${p.noi}`}
+                </span>
               ))}
             </div>
           )}
