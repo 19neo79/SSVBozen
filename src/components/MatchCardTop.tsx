@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { fmtDate } from '../lib/dates';
+import { fmtDate, parseDateLocal } from '../lib/dates';
 import { esito, hasRisultato } from '../lib/risultato';
 import type { ResolvedLocation } from '../lib/location';
 import type { Categoria, SetParziale } from '../types/database';
@@ -32,18 +32,30 @@ export function MatchCardTop({ m, loc, numeroGara, amichevole, oggi, nascondiRis
   /** Il tabellone è bianco: va nascosto quando la card non è colorata (es. durante una modifica). */
   nascondiRisultato?: boolean;
 }) {
+  const giorno = parseDateLocal(m.data);
   return (
     <>
       <div className={`match-band ${m.categoria === 'U15' ? 'u15' : 'u14'}`}>
+        <div className="match-cal" title={fmtDate(m.data)}>
+          <div className="match-cal-gs">{giorno.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}</div>
+          <div className="match-cal-gn">{String(giorno.getDate()).padStart(2, '0')}</div>
+          <div className="match-cal-mm">{giorno.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}</div>
+          <div className="match-cal-hh">{m.orario}</div>
+        </div>
         <div className="match-band-info">
-          <div className="event-date">
-            {fmtDate(m.data)}
+          <div className="match-titolo">
+            vs {m.avversario}
             {oggi && <span className="match-band-tag outline">Oggi</span>}
             {amichevole && <span className="match-band-tag outline">Amichevole</span>}
           </div>
-          <div className="event-detail">
-            {m.orario} · {m.casa_trasferta} · vs {m.avversario} ·{' '}
-            {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+          <div className="match-luogo">
+            <span className="match-ct">{m.casa_trasferta}</span>
+            <span>
+              <svg className="match-pin" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+              </svg>
+              {loc.mapsUrl ? <a href={loc.mapsUrl} target="_blank" rel="noopener noreferrer">{loc.label}</a> : loc.label}
+            </span>
           </div>
           {numeroGara !== undefined && <div className="match-band-sub">N. Gara FIPAV: {numeroGara || '—'}</div>}
         </div>

@@ -624,6 +624,98 @@ tr:last-child td {
   background: #fff;
   color: var(--esito);
 }
+.match-cal {
+  background: #fff;
+  border-radius: 8px;
+  width: 66px;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 5px 0 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  line-height: 1;
+}
+.match-band.u14 .match-cal,
+.match-band.u14 .match-ct {
+  color: var(--blu);
+}
+.match-band.u15 .match-cal,
+.match-band.u15 .match-ct {
+  color: var(--rosso);
+}
+.match-cal-gs,
+.match-cal-mm {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.match-cal-gn {
+  font-size: 34px;
+  font-weight: 800;
+  margin: 1px 0;
+}
+.match-cal-hh {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--inchiostro);
+  border-top: 1px solid var(--linea);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.match-titolo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.05;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.match-luogo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 15px;
+  margin-top: 5px;
+}
+.match-luogo a {
+  font-weight: 600;
+}
+.match-pin {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.match-ct {
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+@media (max-width: 640px) {
+  .match-band {
+    gap: 10px;
+  }
+  .match-cal {
+    width: 56px;
+  }
+  .match-cal-gn {
+    font-size: 28px;
+  }
+  .match-titolo {
+    font-size: 21px;
+  }
+  .match-luogo {
+    font-size: 14px;
+  }
+  .match-band-cat {
+    font-size: 30px;
+  }
+}
 .match-band-info {
   flex: 1;
   min-width: 0;
@@ -642,13 +734,6 @@ tr:last-child td {
 }
 .match-band.u15 {
   background: var(--rosso);
-}
-.match-band .event-date {
-  color: #fff;
-  flex-wrap: wrap;
-}
-.match-band .event-detail {
-  color: rgba(255, 255, 255, 0.92);
 }
 .match-band a {
   color: #fff;
