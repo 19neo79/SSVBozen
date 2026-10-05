@@ -185,7 +185,7 @@ export default function StatsPage() {
 
           <div className="stats-main">
             {selectedPlayer && selectedStats ? (
-              <PlayerStatsView player={selectedPlayer} stats={selectedStats} teamTotalRate={teamTotalRate} />
+              <PlayerStatsView key={selectedPlayer.id} player={selectedPlayer} stats={selectedStats} teamTotalRate={teamTotalRate} />
             ) : (
               <TeamStatsView
                 roster={roster}
@@ -565,6 +565,12 @@ function TeamStatsView({
   );
 }
 
+function shiftMonth(key: string, delta: number): string {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function PlayerStatsView({
   player, stats, teamTotalRate,
 }: {
@@ -579,6 +585,10 @@ function PlayerStatsView({
   const cert = certStatusFor(player.certificato);
   const hasMatchCategoria = stats.matchByCategoria.U14.conv > 0 || stats.matchByCategoria.U15.conv > 0;
   const lastMonthKey = stats.lastEventDate ? stats.lastEventDate.slice(0, 7) : null;
+  const firstMonthKey = stats.firstEventDate ? stats.firstEventDate.slice(0, 7) : null;
+  const [meseCal, setMeseCal] = useState(lastMonthKey);
+  const eventiMese = meseCal ? stats.fullChronology.filter((e) => e.data.slice(0, 7) === meseCal) : [];
+  const presentiMese = eventiMese.filter((e) => e.presente).length;
 
   return (
     <>
@@ -669,10 +679,24 @@ function PlayerStatsView({
         )}
       </div>
 
-      {lastMonthKey && (
+      {meseCal && firstMonthKey && lastMonthKey && (
         <div className="card">
           <h3>Calendario mensile presenze</h3>
-          <MonthHeatmap chronology={stats.fullChronology} monthKey={lastMonthKey} />
+          <div className="mese-nav" style={{ marginBottom: 4 }}>
+            <button className="btn ghost small" aria-label="Mese precedente" disabled={meseCal <= firstMonthKey} onClick={() => setMeseCal(shiftMonth(meseCal, -1))}>
+              ←<span className="mese-nav-testo"> Mese precedente</span>
+            </button>
+            <h3>{meseEsteso(meseCal)}</h3>
+            <button className="btn ghost small" aria-label="Mese successivo" disabled={meseCal >= lastMonthKey} onClick={() => setMeseCal(shiftMonth(meseCal, 1))}>
+              <span className="mese-nav-testo">Mese successivo </span>→
+            </button>
+          </div>
+          <div className="muted" style={{ fontSize: 12.5, textAlign: 'center', marginBottom: 8 }}>
+            {eventiMese.length === 0
+              ? 'Nessuna convocazione in questo mese.'
+              : `Presente a ${presentiMese} su ${eventiMese.length} ${eventiMese.length === 1 ? 'convocazione' : 'convocazioni'}`}
+          </div>
+          <MonthHeatmap chronology={stats.fullChronology} monthKey={meseCal} />
         </div>
       )}
 
