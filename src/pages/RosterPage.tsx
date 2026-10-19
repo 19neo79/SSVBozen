@@ -3,7 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUi } from '../contexts/UiContext';
 import { useDeletePlayer, useFotoAtleti, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
 import { useQueryClient } from '@tanstack/react-query';
-import { caricaFoto, eliminaFoto, impostaFotoAtleta, preparaFoto } from '../lib/fotoAtleti';
+import { apriImmagine, caricaFoto, creaFoto, eliminaFoto, impostaFotoAtleta, type Ritaglio } from '../lib/fotoAtleti';
+import { RitaglioFoto } from '../components/RitaglioFoto';
 import { FotoAtleta } from '../components/ui/FotoAtleta';
 import type { RosterPlayer } from '../types/database';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
@@ -95,11 +96,12 @@ export default function RosterPage() {
   const [capAuto, setCapAuto] = useState(false);
   const [vie, setVie] = useState<Via[]>([]);
   const [esportaIniziali, setEsportaIniziali] = useState<string[] | null>(null);
-  const [fotoNuova, setFotoNuova] = useState<{ blob: Blob; url: string } | null>(null);
+  const [fotoNuova, setFotoNuova] = useState<{ volto: Blob; intera: Blob; url: string } | null>(null);
+  const [daRitagliare, setDaRitagliare] = useState<ImageBitmap | null>(null);
   const [fotoRimossa, setFotoRimossa] = useState(false);
   const [fotoInPreparazione, setFotoInPreparazione] = useState(false);
   const qc = useQueryClient();
-  const { data: fotoUrls = {} } = useFotoAtleti(roster.map((p) => p.foto_path).filter((x): x is string => !!x));
+  const { data: fotoUrls = {} } = useFotoAtleti(roster.flatMap((p) => [p.foto_path, p.foto_intera_path]).filter((x): x is string => !!x));
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
@@ -162,15 +164,43 @@ export default function RosterPage() {
     if (!file) return;
     setFotoInPreparazione(true);
     try {
-      const blob = await preparaFoto(file);
-      if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
-      setFotoNuova({ blob, url: URL.createObjectURL(blob) });
-      setFotoRimossa(false);
+      setDaRitagliare(await apriImmagine(file));
     } catch {
       showToast('Impossibile leggere questa immagine: prova con una foto JPEG o PNG');
     } finally {
       setFotoInPreparazione(false);
     }
+  }
+
+  /** Rifà il ritaglio partendo dalla foto intera già salvata, senza ricaricarla. */
+  async function ritagliaDiNuovo(urlIntera: string) {
+    setFotoInPreparazione(true);
+    try {
+      const blob = await fetch(urlIntera).then((r) => r.blob());
+      setDaRitagliare(await apriImmagine(blob));
+    } catch {
+      showToast('Impossibile aprire la foto salvata');
+    } finally {
+      setFotoInPreparazione(false);
+    }
+  }
+
+  async function confermaRitaglio(r: Ritaglio) {
+    if (!daRitagliare) return;
+    try {
+      const { volto, intera } = await creaFoto(daRitagliare, r);
+      if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
+      setFotoNuova({ volto, intera, url: URL.createObjectURL(volto) });
+      setFotoRimossa(false);
+    } catch {
+      showToast('Errore nella preparazione della foto');
+    }
+    chiudiRitaglio();
+  }
+
+  function chiudiRitaglio() {
+    daRitagliare?.close();
+    setDaRitagliare(null);
   }
 
   function rimuoviFoto() {
@@ -285,15 +315,16 @@ export default function RosterPage() {
     };
     try {
       const id = await savePlayer.mutateAsync({ id: editingId, data });
-      const vecchia = editingId ? roster.find((p) => p.id === editingId)?.foto_path || null : null;
+      const prima = editingId ? roster.find((p) => p.id === editingId) : undefined;
+      const vecchie = [prima?.foto_path, prima?.foto_intera_path];
       try {
         if (fotoNuova) {
-          const path = await caricaFoto(id, fotoNuova.blob);
-          await impostaFotoAtleta(id, path);
-          if (vecchia) await eliminaFoto(vecchia);
-        } else if (fotoRimossa && vecchia) {
-          await impostaFotoAtleta(id, null);
-          await eliminaFoto(vecchia);
+          const paths = await caricaFoto(id, fotoNuova);
+          await impostaFotoAtleta(id, paths.volto, paths.intera);
+          await eliminaFoto(vecchie);
+        } else if (fotoRimossa && vecchie.some(Boolean)) {
+          await impostaFotoAtleta(id, null, null);
+          await eliminaFoto(vecchie);
         }
       } catch {
         showToast('Giocatore salvato, ma la foto non è stata caricata: riprova');
@@ -312,9 +343,9 @@ export default function RosterPage() {
     const ok = await confirm('Eliminare questo giocatore dalla rosa?');
     if (!ok) return;
     try {
-      const foto = roster.find((p) => p.id === id)?.foto_path;
+      const atleta = roster.find((p) => p.id === id);
       await deletePlayer.mutateAsync(id);
-      if (foto) await eliminaFoto(foto);
+      await eliminaFoto([atleta?.foto_path, atleta?.foto_intera_path]);
       if (viewingId === id) setViewingId(null);
       showToast('Giocatore eliminato');
     } catch {
@@ -476,6 +507,7 @@ export default function RosterPage() {
           {(() => {
             const corrente = editingId ? roster.find((p) => p.id === editingId) : undefined;
             const anteprima = fotoNuova?.url || (!fotoRimossa && corrente?.foto_path ? fotoUrls[corrente.foto_path] : undefined);
+            const urlIntera = !fotoNuova && !fotoRimossa && corrente?.foto_intera_path ? fotoUrls[corrente.foto_intera_path] : undefined;
             return (
               <div className="foto-modifica">
                 {anteprima
@@ -486,8 +518,9 @@ export default function RosterPage() {
                     {fotoInPreparazione ? 'Preparo la foto…' : anteprima ? 'Cambia foto' : 'Aggiungi foto'}
                     <input type="file" accept="image/*" hidden onChange={scegliFoto} disabled={fotoInPreparazione} />
                   </label>
+                  {urlIntera && <button type="button" className="btn ghost small" disabled={fotoInPreparazione} onClick={() => ritagliaDiNuovo(urlIntera)}>Rifai ritaglio</button>}
                   {anteprima && <button type="button" className="btn ghost small" onClick={rimuoviFoto}>Rimuovi foto</button>}
-                  <span className="muted" style={{ fontSize: 12 }}>Viene ritagliata quadrata al centro e salvata solo quando premi Salva.</span>
+                  <span className="muted" style={{ fontSize: 12 }}>L'app cerca il viso e propone il ritaglio; la foto si salva quando premi Salva.</span>
                 </div>
               </div>
             );
@@ -694,6 +727,9 @@ export default function RosterPage() {
                 <CategoriaTag dataNascita={viewingPlayer.data_nascita} soloU15={viewingPlayer.solo_u15} />
               </h3>
             </div>
+            {viewingPlayer.foto_intera_path && fotoUrls[viewingPlayer.foto_intera_path] && (
+              <img className="foto-intera" src={fotoUrls[viewingPlayer.foto_intera_path]} alt={`${viewingPlayer.cognome} ${viewingPlayer.nome}`} />
+            )}
             <dl className="detail-list">
               <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
@@ -733,6 +769,8 @@ export default function RosterPage() {
           </div>
         </div>
       )}
+      {daRitagliare && <RitaglioFoto img={daRitagliare} onConferma={confermaRitaglio} onAnnulla={chiudiRitaglio} />}
+
       {esportaIniziali && isAdmin && (
         <EsportaAtleti players={players} iniziali={esportaIniziali} onClose={() => setEsportaIniziali(null)} />
       )}

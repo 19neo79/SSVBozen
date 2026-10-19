@@ -450,6 +450,59 @@ tr:last-child td {
   line-height: 1.2;
   padding: 6px;
 }
+.foto-intera {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  background: var(--panna);
+  border-radius: 8px;
+  margin: 10px 0 4px;
+}
+.ritaglio-overlay {
+  z-index: 70;
+}
+.ritaglio-box {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+.ritaglio-box h3 {
+  margin: 0 0 4px;
+}
+.ritaglio-area {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panna);
+}
+.ritaglio-area canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.ritaglio-area canvas:active {
+  cursor: grabbing;
+}
+/* Il cerchio mostra come apparirà nell'elenco: fuori resta visibile ma scurito. */
+.ritaglio-cerchio {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(16, 35, 63, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
 .foto-modifica {
   display: flex;
   align-items: center;
