@@ -6,6 +6,10 @@ import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
 import { UiProvider } from './contexts/UiContext';
+import { AvvisoAggiornamento } from './components/AvvisoAggiornamento';
+import { registraAggiornamenti } from './lib/aggiornamenti';
+
+registraAggiornamenti();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +27,7 @@ createRoot(document.getElementById('root')!).render(
         <UiProvider>
           <AuthProvider>
             <App />
+            <AvvisoAggiornamento />
           </AuthProvider>
         </UiProvider>
       </BrowserRouter>
