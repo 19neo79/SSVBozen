@@ -375,7 +375,7 @@ export default function RosterPage() {
       )}
 
       {formOpen && isAdmin && (
-        <div className="card">
+        <div className="card form-giocatore">
           <h3>{editingId ? 'Modifica giocatore' : 'Nuovo giocatore'}</h3>
           <div className="row">
             <div className="field"><label>Nome</label><input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
@@ -450,7 +450,7 @@ export default function RosterPage() {
           <div className="field" style={{ marginTop: 16 }}>
             <label style={{ fontSize: 13.5 }}>Residenza</label>
           </div>
-          <div className="row" style={{ marginTop: 4, alignItems: 'flex-start' }}>
+          <div className="row" style={{ marginTop: 4 }}>
             <div className="field" style={{ flex: 1, minWidth: 200 }}>
               <label htmlFor="residenza-comune">Comune</label>
               <input
@@ -483,7 +483,7 @@ export default function RosterPage() {
               {capAuto && <span className="muted" style={{ fontSize: 12 }}>Dal comune: se la frazione ha un CAP proprio, correggilo</span>}
             </div>
           </div>
-          <div className="row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+          <div className="row" style={{ marginTop: 12 }}>
             <div className="field" style={{ flex: 1, minWidth: 220 }}>
               <label htmlFor="residenza-via">Via / località</label>
               <input

@@ -216,6 +216,10 @@ main {
   flex-direction: column;
   gap: 5px;
 }
+/* Nel modulo giocatore le note sotto i campi non devono spostare quelli accanto. */
+.form-giocatore .row {
+  align-items: flex-start;
+}
 .field label {
   font-size: 12px;
   color: var(--inchiostro-soft);
