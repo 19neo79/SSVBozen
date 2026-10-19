@@ -450,7 +450,7 @@ export default function RosterPage() {
           <div className="field" style={{ marginTop: 16 }}>
             <label style={{ fontSize: 13.5 }}>Residenza</label>
           </div>
-          <div className="row" style={{ marginTop: 4 }}>
+          <div className="row" style={{ marginTop: 4, alignItems: 'flex-start' }}>
             <div className="field" style={{ flex: 1, minWidth: 200 }}>
               <label htmlFor="residenza-comune">Comune</label>
               <input
@@ -483,7 +483,7 @@ export default function RosterPage() {
               {capAuto && <span className="muted" style={{ fontSize: 12 }}>Dal comune: se la frazione ha un CAP proprio, correggilo</span>}
             </div>
           </div>
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
             <div className="field" style={{ flex: 1, minWidth: 220 }}>
               <label htmlFor="residenza-via">Via / località</label>
               <input
@@ -500,18 +500,18 @@ export default function RosterPage() {
               {comuneAA && !viaInElenco && (
                 <span className="muted" style={{ fontSize: 12 }}>Via non presente nell'elenco: verrà salvata come l'hai scritta.</span>
               )}
-              {comuneAA && (
-                <span className="muted" style={{ fontSize: 11.5 }}>
-                  Elenco vie ©{' '}
-                  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
-                </span>
-              )}
             </div>
             <div className="field">
               <label htmlFor="residenza-civico">N. civico</label>
               <input id="residenza-civico" style={{ width: 90 }} value={form.indirizzo_civico} onChange={(e) => setForm({ ...form, indirizzo_civico: e.target.value })} />
             </div>
           </div>
+          {comuneAA && (
+            <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
+              Elenco vie ©{' '}
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+            </div>
+          )}
           <div className="row" style={{ marginTop: 12 }}>
             <div className="field"><label>Nome papà</label><input style={{ width: 150 }} value={form.nome_papa} onChange={(e) => setForm({ ...form, nome_papa: e.target.value })} /></div>
             <div className="field"><label>Telefono papà</label><input style={{ width: 150 }} value={form.telefono_papa} onChange={(e) => setForm({ ...form, telefono_papa: e.target.value })} /></div>
