@@ -79,6 +79,13 @@ export default function RosterPage() {
 
   const suggerimenti = useMemo(() => cercaComuni(comuni, form.luogo_nascita), [comuni, form.luogo_nascita]);
 
+  useEffect(() => {
+    if (!formOpen) return;
+    const prima = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prima; };
+  }, [formOpen]);
+
   const comuneAA = COMUNI_AA.find((c) => c.cc === form.indirizzo_comune_cc);
   useEffect(() => {
     if (!comuneAA) { setVie([]); return; }
@@ -375,8 +382,12 @@ export default function RosterPage() {
       )}
 
       {formOpen && isAdmin && (
-        <div className="card form-giocatore">
-          <h3>{editingId ? 'Modifica giocatore' : 'Nuovo giocatore'}</h3>
+        <div className="settings-modal open" role="dialog" aria-modal="true" aria-labelledby="titolo-modulo-giocatore">
+        <div className="modale-giocatore form-giocatore">
+          <div className="modale-giocatore-testa">
+            <h3 id="titolo-modulo-giocatore">{editingId ? 'Modifica giocatore' : 'Nuovo giocatore'}</h3>
+            <button type="button" className="modale-chiudi" aria-label="Chiudi senza salvare" onClick={closeForm}>✕</button>
+          </div>
           <div className="row">
             <div className="field"><label>Nome</label><input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
             <div className="field"><label>Cognome</label><input value={form.cognome} onChange={(e) => setForm({ ...form, cognome: e.target.value })} /></div>
@@ -531,6 +542,7 @@ export default function RosterPage() {
             <button className="btn ghost" onClick={closeForm}>Annulla</button>
             <button className="btn" onClick={handleSave}>Salva</button>
           </div>
+        </div>
         </div>
       )}
 

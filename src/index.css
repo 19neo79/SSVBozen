@@ -1529,6 +1529,51 @@ table.matrix tbody tr:nth-child(even) th {
 .settings-modal.open {
   display: flex;
 }
+.modale-giocatore {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 900px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 24px 24px;
+  box-shadow: 0 12px 40px rgba(16, 35, 63, 0.35);
+}
+.modale-giocatore-testa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.modale-giocatore-testa h3 {
+  margin: 0;
+}
+.modale-chiudi {
+  border: 1px solid var(--linea);
+  background: #fff;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--inchiostro);
+  flex-shrink: 0;
+}
+.modale-chiudi:hover {
+  background: var(--panna);
+}
+@media (max-width: 640px) {
+  .settings-modal:has(.modale-giocatore) {
+    padding: 10px;
+  }
+  .modale-giocatore {
+    padding: 16px;
+    max-height: calc(100dvh - 20px);
+  }
+}
 .settings-box {
   background: #fff;
   border-radius: 10px;
