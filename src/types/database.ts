@@ -56,6 +56,7 @@ export interface RosterPlayer {
   indirizzo_civico: string | null;
   foto_path: string | null;
   foto_intera_path: string | null;
+  foto_busto_path: string | null;
   created_at: string;
 }
 

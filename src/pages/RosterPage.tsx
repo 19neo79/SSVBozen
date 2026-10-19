@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUi } from '../contexts/UiContext';
 import { useDeletePlayer, useFotoAtleti, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
 import { useQueryClient } from '@tanstack/react-query';
-import { apriImmagine, caricaFoto, creaFoto, eliminaFoto, impostaFotoAtleta, type Ritaglio } from '../lib/fotoAtleti';
+import { apriImmagine, caricaFoto, creaFoto, eliminaFoto, impostaFotoAtleta, type FotoPreparate, type Ritaglio } from '../lib/fotoAtleti';
 import { RitaglioFoto } from '../components/RitaglioFoto';
 import { FotoAtleta } from '../components/ui/FotoAtleta';
 import type { RosterPlayer } from '../types/database';
@@ -96,12 +96,13 @@ export default function RosterPage() {
   const [capAuto, setCapAuto] = useState(false);
   const [vie, setVie] = useState<Via[]>([]);
   const [esportaIniziali, setEsportaIniziali] = useState<string[] | null>(null);
-  const [fotoNuova, setFotoNuova] = useState<{ volto: Blob; intera: Blob; url: string } | null>(null);
+  const [fotoNuova, setFotoNuova] = useState<(FotoPreparate & { url: string }) | null>(null);
   const [daRitagliare, setDaRitagliare] = useState<ImageBitmap | null>(null);
+  const [fotoGrande, setFotoGrande] = useState<string | null>(null);
   const [fotoRimossa, setFotoRimossa] = useState(false);
   const [fotoInPreparazione, setFotoInPreparazione] = useState(false);
   const qc = useQueryClient();
-  const { data: fotoUrls = {} } = useFotoAtleti(roster.flatMap((p) => [p.foto_path, p.foto_intera_path]).filter((x): x is string => !!x));
+  const { data: fotoUrls = {} } = useFotoAtleti(roster.flatMap((p) => [p.foto_path, p.foto_busto_path, p.foto_intera_path]).filter((x): x is string => !!x));
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
@@ -188,9 +189,9 @@ export default function RosterPage() {
   async function confermaRitaglio(r: Ritaglio) {
     if (!daRitagliare) return;
     try {
-      const { volto, intera } = await creaFoto(daRitagliare, r);
+      const foto = await creaFoto(daRitagliare, r);
       if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
-      setFotoNuova({ volto, intera, url: URL.createObjectURL(volto) });
+      setFotoNuova({ ...foto, url: URL.createObjectURL(foto.volto) });
       setFotoRimossa(false);
     } catch {
       showToast('Errore nella preparazione della foto');
@@ -316,14 +317,14 @@ export default function RosterPage() {
     try {
       const id = await savePlayer.mutateAsync({ id: editingId, data });
       const prima = editingId ? roster.find((p) => p.id === editingId) : undefined;
-      const vecchie = [prima?.foto_path, prima?.foto_intera_path];
+      const vecchie = [prima?.foto_path, prima?.foto_busto_path, prima?.foto_intera_path];
       try {
         if (fotoNuova) {
           const paths = await caricaFoto(id, fotoNuova);
-          await impostaFotoAtleta(id, paths.volto, paths.intera);
+          await impostaFotoAtleta(id, paths);
           await eliminaFoto(vecchie);
         } else if (fotoRimossa && vecchie.some(Boolean)) {
-          await impostaFotoAtleta(id, null, null);
+          await impostaFotoAtleta(id, null);
           await eliminaFoto(vecchie);
         }
       } catch {
@@ -345,7 +346,7 @@ export default function RosterPage() {
     try {
       const atleta = roster.find((p) => p.id === id);
       await deletePlayer.mutateAsync(id);
-      await eliminaFoto([atleta?.foto_path, atleta?.foto_intera_path]);
+      await eliminaFoto([atleta?.foto_path, atleta?.foto_busto_path, atleta?.foto_intera_path]);
       if (viewingId === id) setViewingId(null);
       showToast('Giocatore eliminato');
     } catch {
@@ -722,14 +723,25 @@ export default function RosterPage() {
           <div className="settings-box scheda-atleta" onClick={(e) => e.stopPropagation()}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FotoAtleta player={viewingPlayer} url={viewingPlayer.foto_path ? fotoUrls[viewingPlayer.foto_path] : undefined} size={64} />
                 {viewingPlayer.cognome} {viewingPlayer.nome}
                 <CategoriaTag dataNascita={viewingPlayer.data_nascita} soloU15={viewingPlayer.solo_u15} />
               </h3>
             </div>
-            {viewingPlayer.foto_intera_path && fotoUrls[viewingPlayer.foto_intera_path] && (
-              <img className="foto-intera" src={fotoUrls[viewingPlayer.foto_intera_path]} alt={`${viewingPlayer.cognome} ${viewingPlayer.nome}`} />
-            )}
+            <div className="scheda-corpo">
+            <div className="scheda-foto">
+              {(() => {
+                const url = (path: string | null) => (path ? fotoUrls[path] : undefined);
+                const quadro = url(viewingPlayer.foto_busto_path) || url(viewingPlayer.foto_path);
+                const intera = url(viewingPlayer.foto_intera_path);
+                if (!quadro) return <FotoAtleta player={viewingPlayer} size={200} quadrata />;
+                return (
+                  <button type="button" className="scheda-foto-btn" onClick={() => setFotoGrande(intera || quadro)} title="Apri la foto intera">
+                    <img src={quadro} alt={`${viewingPlayer.cognome} ${viewingPlayer.nome}`} />
+                    {intera && <span className="scheda-foto-hint">Foto intera</span>}
+                  </button>
+                );
+              })()}
+            </div>
             <dl className="detail-list">
               <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
@@ -756,6 +768,7 @@ export default function RosterPage() {
               <div><dt>Papà</dt><dd>{viewingPlayer.nome_papa || viewingPlayer.telefono_papa ? `${viewingPlayer.nome_papa || ''}${viewingPlayer.nome_papa && viewingPlayer.telefono_papa ? ' · ' : ''}${viewingPlayer.telefono_papa || ''}` : '—'}</dd></div>
               <div><dt>Mamma</dt><dd>{viewingPlayer.nome_mamma || viewingPlayer.telefono_mamma ? `${viewingPlayer.nome_mamma || ''}${viewingPlayer.nome_mamma && viewingPlayer.telefono_mamma ? ' · ' : ''}${viewingPlayer.telefono_mamma || ''}` : '—'}</dd></div>
             </dl>
+            </div>
             <div className="detail-actions">
               <button className="btn ghost" onClick={closeDetail}>Chiudi</button>
               {isAdmin && (
@@ -769,6 +782,13 @@ export default function RosterPage() {
           </div>
         </div>
       )}
+      {fotoGrande && (
+        <div className="settings-modal open foto-grande" onClick={() => setFotoGrande(null)} role="dialog" aria-label="Foto dell'atleta">
+          <img src={fotoGrande} alt="" />
+          <button type="button" className="modale-chiudi foto-grande-chiudi" aria-label="Chiudi foto" onClick={() => setFotoGrande(null)}>✕</button>
+        </div>
+      )}
+
       {daRitagliare && <RitaglioFoto img={daRitagliare} onConferma={confermaRitaglio} onAnnulla={chiudiRitaglio} />}
 
       {esportaIniziali && isAdmin && (

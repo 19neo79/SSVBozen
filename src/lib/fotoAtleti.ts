@@ -92,30 +92,57 @@ async function jpegLeggero(canvas: HTMLCanvasElement): Promise<Blob> {
   return toBlob(canvas, 0.55);
 }
 
-/** Crea le due versioni: viso quadrato per elenco e miniature, foto intera ridotta per la scheda. */
-export async function creaFoto(img: ImageBitmap, r: Ritaglio): Promise<{ volto: Blob; intera: Blob }> {
-  const cv = document.createElement('canvas');
-  cv.width = LATO_VOLTO;
-  cv.height = LATO_VOLTO;
-  cv.getContext('2d')!.drawImage(img, r.x, r.y, r.lato, r.lato, 0, 0, LATO_VOLTO, LATO_VOLTO);
+export interface FotoPreparate {
+  volto: Blob;
+  busto: Blob;
+  intera: Blob;
+}
+
+/** Quadrato a mezzo busto: stesso centro orizzontale del viso, testa in alto, corpo fino al petto. */
+export function ritaglioBusto(volto: Ritaglio, w: number, h: number): Ritaglio {
+  const lato = volto.lato * 1.65;
+  return limitaRitaglio({ lato, x: volto.x + volto.lato / 2 - lato / 2, y: volto.y - volto.lato * 0.15 }, w, h);
+}
+
+function quadrato(img: ImageBitmap, r: Ritaglio): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = LATO_VOLTO;
+  c.height = LATO_VOLTO;
+  c.getContext('2d')!.drawImage(img, r.x, r.y, r.lato, r.lato, 0, 0, LATO_VOLTO, LATO_VOLTO);
+  return c;
+}
+
+/** Tre versioni: viso (elenco e miniature), mezzo busto (scheda), foto intera ridotta (ingrandimento). */
+export async function creaFoto(img: ImageBitmap, r: Ritaglio): Promise<FotoPreparate> {
+  const cv = quadrato(img, r);
+  const cb = quadrato(img, ritaglioBusto(r, img.width, img.height));
   const scala = Math.min(1, LATO_MAX_INTERA / Math.max(img.width, img.height));
   const ci = document.createElement('canvas');
   ci.width = Math.round(img.width * scala);
   ci.height = Math.round(img.height * scala);
   ci.getContext('2d')!.drawImage(img, 0, 0, ci.width, ci.height);
-  return { volto: await jpegLeggero(cv), intera: await jpegLeggero(ci) };
+  return { volto: await jpegLeggero(cv), busto: await jpegLeggero(cb), intera: await jpegLeggero(ci) };
 }
 
 /** Carica con nomi nuovi ogni volta, così i link vecchi non mostrano la foto precedente. */
-export async function caricaFoto(atletaId: string, foto: { volto: Blob; intera: Blob }): Promise<{ volto: string; intera: string }> {
+export interface PercorsiFoto {
+  volto: string;
+  busto: string;
+  intera: string;
+}
+
+export async function caricaFoto(atletaId: string, foto: FotoPreparate): Promise<PercorsiFoto> {
   const t = Date.now();
-  const volto = `${atletaId}/${t}-volto.jpg`;
-  const intera = `${atletaId}/${t}-intera.jpg`;
-  for (const [path, blob] of [[volto, foto.volto], [intera, foto.intera]] as const) {
-    const { error } = await supabase.storage.from('foto-atleti').upload(path, blob, { contentType: 'image/jpeg' });
+  const percorsi: PercorsiFoto = {
+    volto: `${atletaId}/${t}-volto.jpg`,
+    busto: `${atletaId}/${t}-busto.jpg`,
+    intera: `${atletaId}/${t}-intera.jpg`,
+  };
+  for (const k of ['volto', 'busto', 'intera'] as const) {
+    const { error } = await supabase.storage.from('foto-atleti').upload(percorsi[k], foto[k], { contentType: 'image/jpeg' });
     if (error) throw error;
   }
-  return { volto, intera };
+  return percorsi;
 }
 
 export async function eliminaFoto(paths: (string | null | undefined)[]) {
@@ -123,7 +150,10 @@ export async function eliminaFoto(paths: (string | null | undefined)[]) {
   if (daTogliere.length) await supabase.storage.from('foto-atleti').remove(daTogliere);
 }
 
-export async function impostaFotoAtleta(atletaId: string, volto: string | null, intera: string | null) {
-  const { error } = await supabase.from('roster').update({ foto_path: volto, foto_intera_path: intera }).eq('id', atletaId);
+export async function impostaFotoAtleta(atletaId: string, p: PercorsiFoto | null) {
+  const { error } = await supabase
+    .from('roster')
+    .update({ foto_path: p?.volto ?? null, foto_busto_path: p?.busto ?? null, foto_intera_path: p?.intera ?? null })
+    .eq('id', atletaId);
   if (error) throw error;
 }

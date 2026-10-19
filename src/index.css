@@ -450,14 +450,71 @@ tr:last-child td {
   line-height: 1.2;
   padding: 6px;
 }
-.foto-intera {
+.scheda-corpo {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 10px;
+}
+.scheda-corpo .detail-list {
+  margin-top: 0;
+  min-width: 0;
+}
+.scheda-foto-btn {
+  position: relative;
   display: block;
-  width: 100%;
-  max-height: 420px;
-  object-fit: contain;
+  width: 200px;
+  height: 200px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
   background: var(--panna);
+}
+.scheda-foto-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.scheda-foto-hint {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: rgba(16, 35, 63, 0.75);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.foto-grande {
+  z-index: 80;
+  background: rgba(10, 18, 30, 0.88);
+  cursor: zoom-out;
+}
+.foto-grande img {
+  max-width: 100%;
+  max-height: calc(100dvh - 40px);
   border-radius: 8px;
-  margin: 10px 0 4px;
+  object-fit: contain;
+}
+.foto-grande-chiudi {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: 16px;
+}
+@media (max-width: 640px) {
+  .scheda-corpo {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .scheda-foto {
+    display: flex;
+    justify-content: center;
+  }
 }
 .ritaglio-overlay {
   z-index: 70;
