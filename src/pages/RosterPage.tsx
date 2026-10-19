@@ -4,6 +4,7 @@ import { useUi } from '../contexts/UiContext';
 import { useDeletePlayer, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
 import type { RosterPlayer } from '../types/database';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
+import { EsportaAtleti } from '../components/EsportaAtleti';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { calcolaCodiceFiscale, caricaComuni, cercaComuni, type Comune, type Sesso } from '../lib/codiceFiscale';
 import { COMUNI_AA, caricaVie, cercaVie, indirizzoCompleto, trovaComuneAA, type Via } from '../lib/indirizzi';
@@ -32,6 +33,8 @@ const CSV_HEADER_MAP: Record<string, string> = {
   nomemamma: 'nome_mamma', madre: 'nome_mamma',
   telefonomamma: 'telefono_mamma', cellularemamma: 'telefono_mamma', telmamma: 'telefono_mamma',
   certificato: 'certificato', scadenzacertificato: 'certificato', scadenzacertificatomedico: 'certificato', certificatomedico: 'certificato',
+  sesso: 'sesso',
+  luogodinascita: 'luogo_nascita', luogonascita: 'luogo_nascita', natoa: 'luogo_nascita',
   comune: 'indirizzo_comune', comuneresidenza: 'indirizzo_comune', citta: 'indirizzo_comune', residenza: 'indirizzo_comune',
   cap: 'indirizzo_cap',
   via: 'indirizzo_via', indirizzo: 'indirizzo_via',
@@ -72,6 +75,7 @@ export default function RosterPage() {
   const [cfAuto, setCfAuto] = useState(false);
   const [capAuto, setCapAuto] = useState(false);
   const [vie, setVie] = useState<Via[]>([]);
+  const [esportaIniziali, setEsportaIniziali] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
@@ -264,8 +268,8 @@ export default function RosterPage() {
   }
 
   function downloadTemplate() {
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Comune', 'CAP', 'Via', 'Civico'];
-    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027', 'Bolzano', '39100', 'Via Armando Diaz', '34'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico'];
+    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027', 'M', 'BOLZANO (BZ)', 'Bolzano', '39100', 'Via Armando Diaz', '34'];
     const csv = headers.join(';') + '\n' + example.map(csvEscape).join(';');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -277,11 +281,12 @@ export default function RosterPage() {
 
   function exportCSV() {
     if (roster.length === 0) { showToast('Nessun giocatore da esportare'); return; }
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Comune', 'CAP', 'Via', 'Civico'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico'];
     const rows = roster.map((p) => [
       p.nome || '', p.cognome || '', p.numero ?? '', isoToItalian(p.data_nascita), p.codice_fiscale || '', p.ruolo || '',
       p.telefono_atleta || '', p.nome_papa || '', p.telefono_papa || '', p.nome_mamma || '', p.telefono_mamma || '',
       isoToItalian(p.certificato),
+      p.sesso || '', p.luogo_nascita || '',
       p.indirizzo_comune || '', p.indirizzo_cap || '', p.indirizzo_via || '', p.indirizzo_civico || '',
     ]);
     downloadCSV('rosa_export.csv', headers, rows);
@@ -303,6 +308,7 @@ export default function RosterPage() {
       return;
     }
 
+    const listaComuni = fieldMap.includes('luogo_nascita') ? await caricaComuni() : [];
     const rowsToUpsert: Partial<RosterPlayer>[] = [];
     let added = 0, updated = 0, skipped = 0;
     for (let i = 1; i < lines.length; i++) {
@@ -327,6 +333,16 @@ export default function RosterPage() {
         telefono_mamma: rec.telefono_mamma || null,
         certificato: normalizeDateInput(rec.certificato) || null,
       };
+      if ('sesso' in rec) {
+        const sx = rec.sesso.trim().toUpperCase();
+        playerData.sesso = sx.startsWith('M') ? 'M' : sx.startsWith('F') ? 'F' : null;
+      }
+      if ('luogo_nascita' in rec) {
+        const v = rec.luogo_nascita.trim().toUpperCase();
+        const c = v ? listaComuni.find((x) => x.label === v) || listaComuni.find((x) => x.attivo && x.nome === v) : undefined;
+        playerData.luogo_nascita = c ? c.label : null;
+        playerData.luogo_nascita_cc = c ? c.cc : null;
+      }
       if ('indirizzo_comune' in rec) {
         const aa = trovaComuneAA(rec.indirizzo_comune);
         playerData.indirizzo_comune = aa ? aa.nome : rec.indirizzo_comune || null;
@@ -369,6 +385,7 @@ export default function RosterPage() {
             <button className="btn ghost small" onClick={downloadTemplate}>Scarica modello CSV</button>
             <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>Importa da CSV</button>
             <button className="btn ghost small" onClick={exportCSV}>Esporta CSV (backup)</button>
+            <button className="btn ghost small" onClick={() => setEsportaIniziali([])}>Esporta / condividi</button>
             <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
           </div>
           <button className="btn" onClick={() => openForm()}>+ Aggiungi giocatore</button>
@@ -612,6 +629,7 @@ export default function RosterPage() {
               <button className="btn ghost" onClick={closeDetail}>Chiudi</button>
               {isAdmin && (
                 <>
+                  <button className="btn ghost" onClick={() => { setViewingId(null); setEsportaIniziali([viewingPlayer.id]); }}>Esporta / condividi</button>
                   <button className="btn ghost" onClick={() => editFromDetail(viewingPlayer)}>Modifica</button>
                   <button className="btn" style={{ background: 'var(--rosso-scuro)' }} onClick={() => handleDelete(viewingPlayer.id)}>Elimina</button>
                 </>
@@ -619,6 +637,9 @@ export default function RosterPage() {
             </div>
           </div>
         </div>
+      )}
+      {esportaIniziali && isAdmin && (
+        <EsportaAtleti players={players} iniziali={esportaIniziali} onClose={() => setEsportaIniziali(null)} />
       )}
     </section>
   );
