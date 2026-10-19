@@ -11,7 +11,7 @@ import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { EsportaAtleti } from '../components/EsportaAtleti';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { calcolaCodiceFiscale, caricaComuni, cercaComuni, type Comune, type Sesso } from '../lib/codiceFiscale';
-import { COMUNI_AA, caricaVie, cercaVie, indirizzoCompleto, trovaComuneAA, type Via } from '../lib/indirizzi';
+import { COMUNI_AA, caricaVie, cercaFrazioni, cercaVie, etichettaFrazione, frazioneDaEtichetta, indirizzoCompleto, luoghiSimili, trovaComuneAA, vieSimili, type ComuneAA, type LuogoAA, type Via } from '../lib/indirizzi';
 import {
   csvEscape,
   downloadCSV,
@@ -132,10 +132,25 @@ export default function RosterPage() {
     const altri = q.length >= 2 && aa.length === 0
       ? cercaComuni(comuni, form.indirizzo_comune, 20).filter((c) => c.attivo && c.prov !== 'BZ' && c.prov !== 'EE')
       : [];
-    return { aa, altri };
+    // Frazioni (Frangarto, Cornaiano, Gries…): scegliendole si imposta il loro comune.
+    const frazioni = cercaFrazioni(form.indirizzo_comune);
+    return { aa, altri, frazioni };
   }, [comuni, form.indirizzo_comune]);
 
+  // Sotto il campo, perché l'elenco del browser mostra solo le voci che contengono esattamente il testo scritto.
+  const proposteComune = useMemo((): { titolo: string; luoghi: LuogoAA[] } => {
+    const testo = form.indirizzo_comune.trim();
+    if (form.indirizzo_comune_cc || testo.length < 3) return { titolo: '', luoghi: [] };
+    const frazioni = cercaFrazioni(testo, 4);
+    if (frazioni.length) return { titolo: 'È una frazione? Scegli il comune:', luoghi: frazioni.map((frazione) => ({ tipo: 'frazione', frazione })) };
+    return { titolo: 'Forse intendevi:', luoghi: suggerimentiComuneResidenza.aa.length ? [] : luoghiSimili(testo) };
+  }, [form.indirizzo_comune, form.indirizzo_comune_cc, suggerimentiComuneResidenza.aa.length]);
+
   const suggerimentiVia = useMemo(() => cercaVie(vie, form.indirizzo_via), [vie, form.indirizzo_via]);
+  const proposteVia = useMemo(
+    () => (form.indirizzo_via.trim().length >= 4 && suggerimentiVia.length === 0 ? vieSimili(vie, form.indirizzo_via) : []),
+    [vie, form.indirizzo_via, suggerimentiVia.length],
+  );
   const viaInElenco = !form.indirizzo_via.trim() || vie.some((v) => v.n.toLowerCase() === form.indirizzo_via.trim().toLowerCase());
 
   const cfCalcolato = useMemo(
@@ -211,7 +226,7 @@ export default function RosterPage() {
   }
 
   function handleComuneResidenzaChange(value: string) {
-    const aa = trovaComuneAA(value);
+    const aa = frazioneDaEtichetta(value)?.comune ?? trovaComuneAA(value);
     if (aa) {
       setForm((f) => ({
         ...f,
@@ -612,8 +627,23 @@ export default function RosterPage() {
               />
               <datalist id="comuni-residenza">
                 {suggerimentiComuneResidenza.aa.map((c) => <option key={c.cc} value={c.nome} label={c.nomeDe ? `${c.nomeDe} · ${c.cap}` : c.cap} />)}
+                {suggerimentiComuneResidenza.frazioni.map((f) => <option key={`${f.comune.cc}-${f.nome}`} value={etichettaFrazione(f)} label={f.comune.cap} />)}
                 {suggerimentiComuneResidenza.altri.map((c) => <option key={`${c.cc}-${c.label}`} value={c.label} />)}
               </datalist>
+              {proposteComune.luoghi.length > 0 && (
+                <div className="proposte-indirizzo">
+                  <span className="muted">{proposteComune.titolo}</span>
+                  {proposteComune.luoghi.map((l) => {
+                    const comune: ComuneAA = l.tipo === 'comune' ? l.comune : l.frazione.comune;
+                    const testo = l.tipo === 'comune' ? comune.nome : `${l.frazione.nome} → ${comune.nome}`;
+                    return (
+                      <button key={testo} type="button" className="btn ghost small" onClick={() => handleComuneResidenzaChange(comune.nome)}>
+                        {testo}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {form.indirizzo_comune && !form.indirizzo_comune_cc && (
                 <span className="muted" style={{ fontSize: 12 }}>Scegli il comune dall'elenco (per i comuni fuori provincia scrivine il nome, es. Trento).</span>
               )}
@@ -646,6 +676,16 @@ export default function RosterPage() {
               <datalist id="vie-residenza">
                 {suggerimentiVia.map((v) => <option key={v.n + (v.d || '')} value={v.n} label={v.d} />)}
               </datalist>
+              {proposteVia.length > 0 && (
+                <div className="proposte-indirizzo">
+                  <span className="muted">Forse intendevi:</span>
+                  {proposteVia.map((v) => (
+                    <button key={v.n + (v.d || '')} type="button" className="btn ghost small" title={v.d} onClick={() => setForm((f) => ({ ...f, indirizzo_via: v.n }))}>
+                      {v.n}
+                    </button>
+                  ))}
+                </div>
+              )}
               {comuneAA && !viaInElenco && (
                 <span className="muted" style={{ fontSize: 12 }}>Via non presente nell'elenco: verrà salvata come l'hai scritta.</span>
               )}

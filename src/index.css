@@ -217,6 +217,15 @@ main {
   gap: 5px;
 }
 /* Nel modulo giocatore le note sotto i campi non devono spostare quelli accanto. */
+.proposte-indirizzo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
 .form-giocatore .row {
   align-items: flex-start;
 }
