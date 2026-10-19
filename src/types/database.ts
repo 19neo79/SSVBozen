@@ -49,6 +49,11 @@ export interface RosterPlayer {
   sesso: 'M' | 'F' | null;
   luogo_nascita: string | null;
   luogo_nascita_cc: string | null;
+  indirizzo_comune: string | null;
+  indirizzo_comune_cc: string | null;
+  indirizzo_cap: string | null;
+  indirizzo_via: string | null;
+  indirizzo_civico: string | null;
   created_at: string;
 }
 

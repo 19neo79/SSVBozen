@@ -6,6 +6,7 @@ import type { RosterPlayer } from '../types/database';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
 import { calcolaCodiceFiscale, caricaComuni, cercaComuni, type Comune, type Sesso } from '../lib/codiceFiscale';
+import { COMUNI_AA, caricaVie, cercaVie, indirizzoCompleto, trovaComuneAA, type Via } from '../lib/indirizzi';
 import {
   csvEscape,
   downloadCSV,
@@ -31,6 +32,10 @@ const CSV_HEADER_MAP: Record<string, string> = {
   nomemamma: 'nome_mamma', madre: 'nome_mamma',
   telefonomamma: 'telefono_mamma', cellularemamma: 'telefono_mamma', telmamma: 'telefono_mamma',
   certificato: 'certificato', scadenzacertificato: 'certificato', scadenzacertificatomedico: 'certificato', certificatomedico: 'certificato',
+  comune: 'indirizzo_comune', comuneresidenza: 'indirizzo_comune', citta: 'indirizzo_comune', residenza: 'indirizzo_comune',
+  cap: 'indirizzo_cap',
+  via: 'indirizzo_via', indirizzo: 'indirizzo_via',
+  civico: 'indirizzo_civico', ncivico: 'indirizzo_civico', numerocivico: 'indirizzo_civico',
 };
 
 const emptyForm = {
@@ -38,6 +43,7 @@ const emptyForm = {
   telefono_atleta: '', nome_papa: '', telefono_papa: '', nome_mamma: '', telefono_mamma: '', certificato: '',
   solo_u15: false,
   sesso: '' as '' | Sesso, luogo_nascita: '', luogo_nascita_cc: '',
+  indirizzo_comune: '', indirizzo_comune_cc: '', indirizzo_cap: '', indirizzo_via: '', indirizzo_civico: '',
 };
 
 function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean } {
@@ -64,12 +70,35 @@ export default function RosterPage() {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [comuni, setComuni] = useState<Comune[]>([]);
   const [cfAuto, setCfAuto] = useState(false);
+  const [capAuto, setCapAuto] = useState(false);
+  const [vie, setVie] = useState<Via[]>([]);
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
   }, [formOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const suggerimenti = useMemo(() => cercaComuni(comuni, form.luogo_nascita), [comuni, form.luogo_nascita]);
+
+  const comuneAA = COMUNI_AA.find((c) => c.cc === form.indirizzo_comune_cc);
+  useEffect(() => {
+    if (!comuneAA) { setVie([]); return; }
+    let attivo = true;
+    caricaVie(comuneAA.cc).then((v) => { if (attivo) setVie(v); });
+    return () => { attivo = false; };
+  }, [comuneAA?.cc]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const suggerimentiComuneResidenza = useMemo(() => {
+    const q = form.indirizzo_comune.trim().toLowerCase();
+    const aa = COMUNI_AA.filter((c) => !q || c.nome.toLowerCase().includes(q) || c.nomeDe.toLowerCase().includes(q));
+    // Fuori provincia: elenco nazionale, solo se il testo non corrisponde già a un comune altoatesino.
+    const altri = q.length >= 2 && aa.length === 0
+      ? cercaComuni(comuni, form.indirizzo_comune, 20).filter((c) => c.attivo && c.prov !== 'BZ' && c.prov !== 'EE')
+      : [];
+    return { aa, altri };
+  }, [comuni, form.indirizzo_comune]);
+
+  const suggerimentiVia = useMemo(() => cercaVie(vie, form.indirizzo_via), [vie, form.indirizzo_via]);
+  const viaInElenco = !form.indirizzo_via.trim() || vie.some((v) => v.n.toLowerCase() === form.indirizzo_via.trim().toLowerCase());
 
   const cfCalcolato = useMemo(
     () => (form.sesso && form.luogo_nascita_cc
@@ -91,6 +120,28 @@ export default function RosterPage() {
       setCfAuto(false);
     }
   }, [cfCalcolato]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleComuneResidenzaChange(value: string) {
+    const aa = trovaComuneAA(value);
+    if (aa) {
+      setForm((f) => ({
+        ...f,
+        indirizzo_comune: aa.nome,
+        indirizzo_comune_cc: aa.cc,
+        indirizzo_cap: !f.indirizzo_cap || capAuto || f.indirizzo_comune_cc !== aa.cc ? aa.cap : f.indirizzo_cap,
+      }));
+      setCapAuto(true);
+      return;
+    }
+    const altro = comuni.find((c) => c.attivo && c.prov !== 'EE' && c.label === value.toUpperCase());
+    setForm((f) => ({
+      ...f,
+      indirizzo_comune: value,
+      indirizzo_comune_cc: altro ? altro.cc : '',
+      indirizzo_cap: capAuto ? '' : f.indirizzo_cap,
+    }));
+    if (capAuto) setCapAuto(false);
+  }
 
   function handleLuogoChange(value: string) {
     const match = comuni.find((c) => c.label === value.toUpperCase());
@@ -114,12 +165,15 @@ export default function RosterPage() {
         nome_mamma: p.nome_mamma || '', telefono_mamma: p.telefono_mamma || '', certificato: p.certificato || '',
         solo_u15: p.solo_u15,
         sesso: p.sesso || '', luogo_nascita: p.luogo_nascita || '', luogo_nascita_cc: p.luogo_nascita_cc || '',
+        indirizzo_comune: p.indirizzo_comune || '', indirizzo_comune_cc: p.indirizzo_comune_cc || '',
+        indirizzo_cap: p.indirizzo_cap || '', indirizzo_via: p.indirizzo_via || '', indirizzo_civico: p.indirizzo_civico || '',
       });
     } else {
       setEditingId(null);
       setForm(emptyForm);
     }
     setCfAuto(false);
+    setCapAuto(false);
     setFormOpen(true);
   }
 
@@ -135,6 +189,14 @@ export default function RosterPage() {
     }
     if (form.luogo_nascita.trim() && !form.luogo_nascita_cc) {
       showToast('Scegli il luogo di nascita dall\'elenco dei comuni (o svuota il campo)');
+      return;
+    }
+    if (form.indirizzo_comune.trim() && !form.indirizzo_comune_cc) {
+      showToast('Scegli il comune di residenza dall\'elenco (o svuota il campo)');
+      return;
+    }
+    if (form.indirizzo_cap.trim() && !/^\d{5}$/.test(form.indirizzo_cap.trim())) {
+      showToast('Il CAP deve avere 5 cifre');
       return;
     }
     const data = {
@@ -154,6 +216,11 @@ export default function RosterPage() {
       sesso: form.sesso || null,
       luogo_nascita: form.luogo_nascita_cc ? form.luogo_nascita.toUpperCase() : null,
       luogo_nascita_cc: form.luogo_nascita_cc || null,
+      indirizzo_comune: form.indirizzo_comune_cc ? form.indirizzo_comune.trim() : null,
+      indirizzo_comune_cc: form.indirizzo_comune_cc || null,
+      indirizzo_cap: form.indirizzo_cap.trim() || null,
+      indirizzo_via: form.indirizzo_via.trim() || null,
+      indirizzo_civico: form.indirizzo_civico.trim() || null,
     };
     try {
       await savePlayer.mutateAsync({ id: editingId, data });
@@ -190,8 +257,8 @@ export default function RosterPage() {
   }
 
   function downloadTemplate() {
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico'];
-    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Comune', 'CAP', 'Via', 'Civico'];
+    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027', 'Bolzano', '39100', 'Via Armando Diaz', '34'];
     const csv = headers.join(';') + '\n' + example.map(csvEscape).join(';');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -203,11 +270,12 @@ export default function RosterPage() {
 
   function exportCSV() {
     if (roster.length === 0) { showToast('Nessun giocatore da esportare'); return; }
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Comune', 'CAP', 'Via', 'Civico'];
     const rows = roster.map((p) => [
       p.nome || '', p.cognome || '', p.numero ?? '', isoToItalian(p.data_nascita), p.codice_fiscale || '', p.ruolo || '',
       p.telefono_atleta || '', p.nome_papa || '', p.telefono_papa || '', p.nome_mamma || '', p.telefono_mamma || '',
       isoToItalian(p.certificato),
+      p.indirizzo_comune || '', p.indirizzo_cap || '', p.indirizzo_via || '', p.indirizzo_civico || '',
     ]);
     downloadCSV('rosa_export.csv', headers, rows);
   }
@@ -252,6 +320,15 @@ export default function RosterPage() {
         telefono_mamma: rec.telefono_mamma || null,
         certificato: normalizeDateInput(rec.certificato) || null,
       };
+      if ('indirizzo_comune' in rec) {
+        const aa = trovaComuneAA(rec.indirizzo_comune);
+        playerData.indirizzo_comune = aa ? aa.nome : rec.indirizzo_comune || null;
+        playerData.indirizzo_comune_cc = aa ? aa.cc : null;
+        if (aa && !rec.indirizzo_cap) playerData.indirizzo_cap = aa.cap;
+      }
+      if ('indirizzo_cap' in rec) playerData.indirizzo_cap = rec.indirizzo_cap || playerData.indirizzo_cap || null;
+      if ('indirizzo_via' in rec) playerData.indirizzo_via = rec.indirizzo_via || null;
+      if ('indirizzo_civico' in rec) playerData.indirizzo_civico = rec.indirizzo_civico || null;
       const existing = codiceFiscale ? roster.find((p) => p.codice_fiscale && p.codice_fiscale === codiceFiscale) : null;
       if (existing) {
         rowsToUpsert.push({ id: existing.id, ...playerData });
@@ -370,6 +447,71 @@ export default function RosterPage() {
             </div>
             <div className="field"><label>Cellulare atleta</label><input style={{ width: 150 }} value={form.telefono_atleta} onChange={(e) => setForm({ ...form, telefono_atleta: e.target.value })} /></div>
           </div>
+          <div className="field" style={{ marginTop: 16 }}>
+            <label style={{ fontSize: 13.5 }}>Residenza</label>
+          </div>
+          <div className="row" style={{ marginTop: 4 }}>
+            <div className="field" style={{ flex: 1, minWidth: 200 }}>
+              <label htmlFor="residenza-comune">Comune</label>
+              <input
+                id="residenza-comune"
+                list="comuni-residenza"
+                style={{ width: '100%' }}
+                placeholder="Scrivi e scegli dall'elenco…"
+                value={form.indirizzo_comune}
+                onChange={(e) => handleComuneResidenzaChange(e.target.value)}
+              />
+              <datalist id="comuni-residenza">
+                {suggerimentiComuneResidenza.aa.map((c) => <option key={c.cc} value={c.nome} label={c.nomeDe ? `${c.nomeDe} · ${c.cap}` : c.cap} />)}
+                {suggerimentiComuneResidenza.altri.map((c) => <option key={`${c.cc}-${c.label}`} value={c.label} />)}
+              </datalist>
+              {form.indirizzo_comune && !form.indirizzo_comune_cc && (
+                <span className="muted" style={{ fontSize: 12 }}>Scegli il comune dall'elenco (per i comuni fuori provincia scrivine il nome, es. Trento).</span>
+              )}
+              {comuneAA && comuneAA.nomeDe && <span className="muted" style={{ fontSize: 12 }}>{comuneAA.nomeDe}</span>}
+            </div>
+            <div className="field">
+              <label htmlFor="residenza-cap">CAP</label>
+              <input
+                id="residenza-cap"
+                inputMode="numeric"
+                maxLength={5}
+                style={{ width: 90 }}
+                value={form.indirizzo_cap}
+                onChange={(e) => { setCapAuto(false); setForm({ ...form, indirizzo_cap: e.target.value }); }}
+              />
+              {capAuto && <span className="muted" style={{ fontSize: 12 }}>Dal comune: se la frazione ha un CAP proprio, correggilo</span>}
+            </div>
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <div className="field" style={{ flex: 1, minWidth: 220 }}>
+              <label htmlFor="residenza-via">Via / località</label>
+              <input
+                id="residenza-via"
+                list="vie-residenza"
+                style={{ width: '100%' }}
+                placeholder={comuneAA ? 'Scrivi e scegli dall\'elenco delle vie…' : 'Scrivi la via'}
+                value={form.indirizzo_via}
+                onChange={(e) => setForm({ ...form, indirizzo_via: e.target.value })}
+              />
+              <datalist id="vie-residenza">
+                {suggerimentiVia.map((v) => <option key={v.n + (v.d || '')} value={v.n} label={v.d} />)}
+              </datalist>
+              {comuneAA && !viaInElenco && (
+                <span className="muted" style={{ fontSize: 12 }}>Via non presente nell'elenco: verrà salvata come l'hai scritta.</span>
+              )}
+              {comuneAA && (
+                <span className="muted" style={{ fontSize: 11.5 }}>
+                  Elenco vie ©{' '}
+                  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+                </span>
+              )}
+            </div>
+            <div className="field">
+              <label htmlFor="residenza-civico">N. civico</label>
+              <input id="residenza-civico" style={{ width: 90 }} value={form.indirizzo_civico} onChange={(e) => setForm({ ...form, indirizzo_civico: e.target.value })} />
+            </div>
+          </div>
           <div className="row" style={{ marginTop: 12 }}>
             <div className="field"><label>Nome papà</label><input style={{ width: 150 }} value={form.nome_papa} onChange={(e) => setForm({ ...form, nome_papa: e.target.value })} /></div>
             <div className="field"><label>Telefono papà</label><input style={{ width: 150 }} value={form.telefono_papa} onChange={(e) => setForm({ ...form, telefono_papa: e.target.value })} /></div>
@@ -433,6 +575,16 @@ export default function RosterPage() {
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
               <div><dt>Sesso</dt><dd>{viewingPlayer.sesso === 'M' ? 'Maschio' : viewingPlayer.sesso === 'F' ? 'Femmina' : '—'}</dd></div>
               <div><dt>Luogo di nascita</dt><dd>{viewingPlayer.luogo_nascita || '—'}</dd></div>
+              <div>
+                <dt>Residenza</dt>
+                <dd>
+                  {indirizzoCompleto(viewingPlayer) ? (
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(indirizzoCompleto(viewingPlayer))}`} target="_blank" rel="noopener noreferrer">
+                      {indirizzoCompleto(viewingPlayer)}
+                    </a>
+                  ) : '—'}
+                </dd>
+              </div>
               <div><dt>Codice fiscale</dt><dd>{viewingPlayer.codice_fiscale || '—'}</dd></div>
               <div>
                 <dt>Certificato medico</dt>
