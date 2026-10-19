@@ -18,14 +18,15 @@ export function useRoster() {
 export function useSavePlayer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string | null; data: Partial<RosterPlayer> }) => {
+    mutationFn: async ({ id, data }: { id: string | null; data: Partial<RosterPlayer> }): Promise<string> => {
       if (id) {
         const { error } = await supabase.from('roster').update(data).eq('id', id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from('roster').insert(data);
-        if (error) throw error;
+        return id;
       }
+      const { data: creato, error } = await supabase.from('roster').insert(data).select('id').single();
+      if (error) throw error;
+      return creato.id as string;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
@@ -59,5 +60,22 @@ export function useUpsertManyPlayers() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+/** Link temporanei (1 ora) alle foto nell'archivio privato, per tutti gli atleti in una sola richiesta. */
+export function useFotoAtleti(paths: string[]) {
+  const ordinati = [...new Set(paths)].sort();
+  return useQuery({
+    queryKey: ['foto-atleti', ordinati],
+    enabled: ordinati.length > 0,
+    staleTime: 50 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from('foto-atleti').createSignedUrls(ordinati, 3600);
+      if (error) throw error;
+      const mappa: Record<string, string> = {};
+      (data || []).forEach((d) => { if (d.path && d.signedUrl) mappa[d.path] = d.signedUrl; });
+      return mappa;
+    },
   });
 }

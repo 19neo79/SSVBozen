@@ -402,6 +402,69 @@ tr:last-child td {
   font-size: 12.5px;
   color: var(--inchiostro-soft);
 }
+.roster-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.roster-cert.valido {
+  color: #1a7a34;
+}
+.roster-cert.in-scadenza {
+  color: #a86a00;
+  font-weight: 600;
+}
+.roster-cert.scaduto {
+  color: var(--rosso);
+  font-weight: 600;
+}
+.roster-cert.assente {
+  color: var(--inchiostro-soft);
+}
+.foto-atleta {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panna);
+}
+.foto-atleta-vuota {
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.foto-atleta-vuota.u14 {
+  background: var(--blu);
+}
+.foto-atleta-vuota.u15 {
+  background: var(--rosso);
+}
+.foto-atleta-placeholder {
+  border: 2px dashed var(--linea);
+  color: var(--inchiostro-soft);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.2;
+  padding: 6px;
+}
+.foto-modifica {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 4px 0 8px;
+  flex-wrap: wrap;
+}
+.foto-azioni {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 200px;
+}
 .roster-row-chevron {
   color: var(--inchiostro-soft);
   font-size: 20px;
@@ -442,6 +505,36 @@ tr:last-child td {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 16px;
+}
+
+/* Scheda atleta: più larga, dati su due colonne, pulsanti che vanno a capo. */
+.settings-box.scheda-atleta {
+  max-width: 760px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.scheda-atleta .detail-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 28px;
+}
+.scheda-atleta .detail-list > div,
+.scheda-atleta .detail-list > div:last-child {
+  border-bottom: 1px solid var(--linea);
+  padding-bottom: 10px;
+}
+.scheda-atleta .detail-list > div.largo {
+  grid-column: 1 / -1;
+}
+.scheda-atleta .detail-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .scheda-atleta .detail-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card {

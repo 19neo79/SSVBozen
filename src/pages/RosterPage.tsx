@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUi } from '../contexts/UiContext';
-import { useDeletePlayer, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
+import { useDeletePlayer, useFotoAtleti, useRoster, useSavePlayer, useUpsertManyPlayers } from '../hooks/useRoster';
+import { useQueryClient } from '@tanstack/react-query';
+import { caricaFoto, eliminaFoto, impostaFotoAtleta, preparaFoto } from '../lib/fotoAtleti';
+import { FotoAtleta } from '../components/ui/FotoAtleta';
 import type { RosterPlayer } from '../types/database';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { EsportaAtleti } from '../components/EsportaAtleti';
@@ -49,13 +52,29 @@ const emptyForm = {
   indirizzo_comune: '', indirizzo_comune_cc: '', indirizzo_cap: '', indirizzo_via: '', indirizzo_civico: '',
 };
 
-function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean } {
-  if (!p.certificato) return { label: '—', warn: false };
+function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean; stato: string; breve: string } {
+  if (!p.certificato) return { label: '—', warn: false, stato: 'assente', breve: 'Certificato non inserito' };
   const label = fmtDateShort(p.certificato);
   const cd = new Date(p.certificato + 'T00:00:00');
-  if (cd < today) return { label: `Scaduto — ${label}`, warn: true };
-  if (cd < soon) return { label: `In scadenza — ${label}`, warn: true };
-  return { label, warn: false };
+  if (cd < today) return { label: `Scaduto — ${label}`, warn: true, stato: 'scaduto', breve: `Certificato scaduto il ${label}` };
+  if (cd < soon) return { label: `In scadenza — ${label}`, warn: true, stato: 'in-scadenza', breve: `Certificato in scadenza il ${label}` };
+  return { label, warn: false, stato: 'valido', breve: `Certificato fino al ${label}` };
+}
+
+function eta(dataNascita: string): number {
+  const n = new Date(dataNascita + 'T00:00:00');
+  const oggi = new Date();
+  let anni = oggi.getFullYear() - n.getFullYear();
+  if (oggi.getMonth() < n.getMonth() || (oggi.getMonth() === n.getMonth() && oggi.getDate() < n.getDate())) anni--;
+  return anni;
+}
+
+/** Il primo numero utile: dell'atleta, altrimenti di un genitore (con chi è). */
+function contattoPrincipale(p: RosterPlayer): string | null {
+  if (p.telefono_atleta) return `Tel. ${p.telefono_atleta}`;
+  if (p.telefono_mamma) return `Mamma ${p.telefono_mamma}`;
+  if (p.telefono_papa) return `Papà ${p.telefono_papa}`;
+  return null;
 }
 
 export default function RosterPage() {
@@ -76,6 +95,11 @@ export default function RosterPage() {
   const [capAuto, setCapAuto] = useState(false);
   const [vie, setVie] = useState<Via[]>([]);
   const [esportaIniziali, setEsportaIniziali] = useState<string[] | null>(null);
+  const [fotoNuova, setFotoNuova] = useState<{ blob: Blob; url: string } | null>(null);
+  const [fotoRimossa, setFotoRimossa] = useState(false);
+  const [fotoInPreparazione, setFotoInPreparazione] = useState(false);
+  const qc = useQueryClient();
+  const { data: fotoUrls = {} } = useFotoAtleti(roster.map((p) => p.foto_path).filter((x): x is string => !!x));
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
@@ -132,6 +156,29 @@ export default function RosterPage() {
     }
   }, [cfCalcolato]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function scegliFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setFotoInPreparazione(true);
+    try {
+      const blob = await preparaFoto(file);
+      if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
+      setFotoNuova({ blob, url: URL.createObjectURL(blob) });
+      setFotoRimossa(false);
+    } catch {
+      showToast('Impossibile leggere questa immagine: prova con una foto JPEG o PNG');
+    } finally {
+      setFotoInPreparazione(false);
+    }
+  }
+
+  function rimuoviFoto() {
+    if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
+    setFotoNuova(null);
+    setFotoRimossa(true);
+  }
+
   function handleComuneResidenzaChange(value: string) {
     const aa = trovaComuneAA(value);
     if (aa) {
@@ -185,6 +232,9 @@ export default function RosterPage() {
     }
     setCfAuto(false);
     setCapAuto(false);
+    if (fotoNuova) URL.revokeObjectURL(fotoNuova.url);
+    setFotoNuova(null);
+    setFotoRimossa(false);
     setFormOpen(true);
   }
 
@@ -234,7 +284,23 @@ export default function RosterPage() {
       indirizzo_civico: form.indirizzo_civico.trim() || null,
     };
     try {
-      await savePlayer.mutateAsync({ id: editingId, data });
+      const id = await savePlayer.mutateAsync({ id: editingId, data });
+      const vecchia = editingId ? roster.find((p) => p.id === editingId)?.foto_path || null : null;
+      try {
+        if (fotoNuova) {
+          const path = await caricaFoto(id, fotoNuova.blob);
+          await impostaFotoAtleta(id, path);
+          if (vecchia) await eliminaFoto(vecchia);
+        } else if (fotoRimossa && vecchia) {
+          await impostaFotoAtleta(id, null);
+          await eliminaFoto(vecchia);
+        }
+      } catch {
+        showToast('Giocatore salvato, ma la foto non è stata caricata: riprova');
+        qc.invalidateQueries({ queryKey: ['roster'] });
+        return;
+      }
+      if (fotoNuova || fotoRimossa) qc.invalidateQueries({ queryKey: ['roster'] });
       closeForm();
       showToast('Giocatore salvato');
     } catch {
@@ -246,7 +312,9 @@ export default function RosterPage() {
     const ok = await confirm('Eliminare questo giocatore dalla rosa?');
     if (!ok) return;
     try {
+      const foto = roster.find((p) => p.id === id)?.foto_path;
       await deletePlayer.mutateAsync(id);
+      if (foto) await eliminaFoto(foto);
       if (viewingId === id) setViewingId(null);
       showToast('Giocatore eliminato');
     } catch {
@@ -405,6 +473,25 @@ export default function RosterPage() {
             <h3 id="titolo-modulo-giocatore">{editingId ? 'Modifica giocatore' : 'Nuovo giocatore'}</h3>
             <button type="button" className="modale-chiudi" aria-label="Chiudi senza salvare" onClick={closeForm}>✕</button>
           </div>
+          {(() => {
+            const corrente = editingId ? roster.find((p) => p.id === editingId) : undefined;
+            const anteprima = fotoNuova?.url || (!fotoRimossa && corrente?.foto_path ? fotoUrls[corrente.foto_path] : undefined);
+            return (
+              <div className="foto-modifica">
+                {anteprima
+                  ? <img className="foto-atleta" src={anteprima} alt="Foto dell'atleta" style={{ width: 88, height: 88 }} />
+                  : <span className="foto-atleta foto-atleta-placeholder" style={{ width: 88, height: 88 }}>Nessuna foto</span>}
+                <div className="foto-azioni">
+                  <label className="btn ghost small" style={{ cursor: 'pointer' }}>
+                    {fotoInPreparazione ? 'Preparo la foto…' : anteprima ? 'Cambia foto' : 'Aggiungi foto'}
+                    <input type="file" accept="image/*" hidden onChange={scegliFoto} disabled={fotoInPreparazione} />
+                  </label>
+                  {anteprima && <button type="button" className="btn ghost small" onClick={rimuoviFoto}>Rimuovi foto</button>}
+                  <span className="muted" style={{ fontSize: 12 }}>Viene ritagliata quadrata al centro e salvata solo quando premi Salva.</span>
+                </div>
+              </div>
+            );
+          })()}
           <div className="row">
             <div className="field"><label>Nome</label><input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
             <div className="field"><label>Cognome</label><input value={form.cognome} onChange={(e) => setForm({ ...form, cognome: e.target.value })} /></div>
@@ -571,15 +658,23 @@ export default function RosterPage() {
             const cert = certStatus(p, today, soon);
             return (
               <button className="roster-row" key={p.id} onClick={() => openDetail(p.id)}>
-                <span className="num-badge">{p.numero ?? '–'}</span>
+                <FotoAtleta player={p} url={p.foto_path ? fotoUrls[p.foto_path] : undefined} size={48} />
                 <div className="roster-row-main">
                   <div className="roster-row-top">
                     <span className="roster-row-name">{p.cognome} {p.nome}</span>
                     <CategoriaTag dataNascita={p.data_nascita} soloU15={p.solo_u15} />
                   </div>
                   <div className="roster-row-meta">
-                    {p.data_nascita ? fmtDateShort(p.data_nascita) : '—'} · {p.telefono_atleta || '—'}
-                    {cert.warn && <span className="cert-warn"> · {cert.label}</span>}
+                    {[
+                      p.data_nascita ? `${eta(p.data_nascita)} anni · ${fmtDateShort(p.data_nascita)}` : null,
+                      p.numero != null ? `maglia ${p.numero}` : null,
+                      p.ruolo,
+                      p.indirizzo_comune,
+                    ].filter(Boolean).join(' · ') || '—'}
+                  </div>
+                  <div className="roster-row-meta">
+                    {contattoPrincipale(p) && <span>{contattoPrincipale(p)}</span>}
+                    <span className={`roster-cert ${cert.stato}`}>{cert.breve}</span>
                   </div>
                 </div>
                 <span className="roster-row-chevron">›</span>
@@ -591,10 +686,10 @@ export default function RosterPage() {
 
       {viewingPlayer && (
         <div className="settings-modal open" onClick={closeDetail}>
-          <div className="settings-box" onClick={(e) => e.stopPropagation()}>
+          <div className="settings-box scheda-atleta" onClick={(e) => e.stopPropagation()}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="num-badge">{viewingPlayer.numero ?? '–'}</span>
+                <FotoAtleta player={viewingPlayer} url={viewingPlayer.foto_path ? fotoUrls[viewingPlayer.foto_path] : undefined} size={64} />
                 {viewingPlayer.cognome} {viewingPlayer.nome}
                 <CategoriaTag dataNascita={viewingPlayer.data_nascita} soloU15={viewingPlayer.solo_u15} />
               </h3>
@@ -604,7 +699,7 @@ export default function RosterPage() {
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
               <div><dt>Sesso</dt><dd>{viewingPlayer.sesso === 'M' ? 'Maschio' : viewingPlayer.sesso === 'F' ? 'Femmina' : '—'}</dd></div>
               <div><dt>Luogo di nascita</dt><dd>{viewingPlayer.luogo_nascita || '—'}</dd></div>
-              <div>
+              <div className="largo">
                 <dt>Residenza</dt>
                 <dd>
                   {indirizzoCompleto(viewingPlayer) ? (
