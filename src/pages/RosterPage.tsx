@@ -499,7 +499,8 @@ export default function RosterPage() {
     e.target.value = '';
   }
 
-  const players = [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
+  // Sempre in ordine di cognome e nome (il numero di maglia ora segue la divisa e cambierebbe l'ordine).
+  const players = [...roster].sort((a, b) => a.cognome.localeCompare(b.cognome, 'it') || a.nome.localeCompare(b.nome, 'it'));
   const today = new Date();
   const soon = new Date();
   soon.setDate(soon.getDate() + 30);
