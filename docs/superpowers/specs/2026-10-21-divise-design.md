@@ -41,7 +41,7 @@ campionati usa sempre la stessa divisa.
 - **Numeri doppi**: due divise con lo stesso numero, stesso gruppo e stesso tipo (normale/libero) → **avviso**,
   non blocco. Senza gruppo non c'è nessun avviso: all'inizio il magazzino può avere numeri ripetuti.
 - **Ragazzo tolto dalla rosa**: la divisa conserva il nome (salvato insieme al collegamento) e viene segnata
-  "non più in rosa", così si sa che va restituita.
+  "non più in rosa" (il suo `roster_id` non corrisponde più a nessun ragazzo), così si sa che va restituita.
 - **Chi può accedere: solo gli admin.** Menu, pagina (`RequireAdmin`) e database (RLS `my_role() = 'admin'`
   per lettura e scrittura, nessun accesso per anon e allenatori).
 
@@ -87,7 +87,7 @@ gruppo text null check (gruppo in ('U17','U14-15','U12-13'))
 numero int not null check (numero between 0 and 99)
 taglia text not null check (taglia in ('XS','S','M','L','XL','XXL','3XL'))
 libero boolean not null default false
-roster_id uuid null references roster(id) on delete set null
+roster_id uuid null              -- id del ragazzo in rosa, senza vincolo: se viene cancellato resta e la divisa risulta "non più in rosa"
 giocatore_nome text null      -- sempre valorizzato quando c'è un giocatore (anche dalla rosa)
 note text null
 created_at timestamptz default now()
@@ -98,9 +98,8 @@ unique index su (lower(trim(giocatore_nome)), libero) where roster_id is null an
 
 RLS: select/insert/update/delete solo `my_role() = 'admin'`; `revoke all on divise from anon`.
 
-Con `on delete set null` sul collegamento alla rosa, quando un ragazzo viene eliminato la divisa resta con il suo
-nome e senza `roster_id`. Se esiste già una divisa a mano con lo stesso nome e tipo, il vincolo dei nomi può
-impedire la cancellazione dalla rosa. Caso rarissimo: l'app lo segnala con un messaggio chiaro.
+`roster_id` non ha vincolo verso `roster`: cancellare un ragazzo non tocca le divise, che restano con il suo id e
+il suo nome e vengono mostrate come "non più in rosa".
 
 ## File
 
