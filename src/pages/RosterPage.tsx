@@ -7,7 +7,8 @@ import { apriImmagine, caricaFoto, creaFoto, eliminaFoto, impostaFotoAtleta, typ
 import { RitaglioFoto } from '../components/RitaglioFoto';
 import { FotoAtleta } from '../components/ui/FotoAtleta';
 import type { RosterPlayer, TagliaDivisa } from '../types/database';
-import { TAGLIE } from '../lib/divise';
+import { TAGLIE, diviseDelGiocatore, testoDiviseGiocatore } from '../lib/divise';
+import { useDivise } from '../hooks/useDivise';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { EsportaAtleti } from '../components/EsportaAtleti';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
@@ -83,6 +84,8 @@ function contattoPrincipale(p: RosterPlayer): string | null {
 
 export default function RosterPage() {
   const { isAdmin } = useAuth();
+  // Le divise le vedono solo gli admin.
+  const { data: divise = [] } = useDivise({ enabled: isAdmin });
   const { showToast, confirm } = useUi();
   const { data: roster = [] } = useRoster();
   const savePlayer = useSavePlayer();
@@ -554,7 +557,15 @@ export default function RosterPage() {
           <div className="row">
             <div className="field"><label>Nome</label><input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
             <div className="field"><label>Cognome</label><input value={form.cognome} onChange={(e) => setForm({ ...form, cognome: e.target.value })} /></div>
-            <div className="field"><label>N. maglia</label><input type="number" min={0} max={99} style={{ width: 80 }} value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+            <div className="field">
+              <label>N. maglia</label>
+              <input type="number" min={0} max={99} style={{ width: 80 }} value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+              {editingId && (() => {
+                const corrente = roster.find((p) => p.id === editingId);
+                const normale = corrente ? diviseDelGiocatore(corrente, divise).normale : undefined;
+                return normale ? <span className="muted" style={{ fontSize: 12 }}>Dalla divisa n. {normale.numero}</span> : null;
+              })()}
+            </div>
           </div>
           <div className="row" style={{ marginTop: 12 }}>
             <div className="field"><label>Data di nascita</label><input type="date" value={form.data_nascita} onChange={(e) => setForm({ ...form, data_nascita: e.target.value })} /></div>
@@ -766,6 +777,11 @@ export default function RosterPage() {
                   <div className="roster-row-meta">
                     {contattoPrincipale(p) && <span>{contattoPrincipale(p)}</span>}
                     <span className={`roster-cert ${cert.stato}`}>{cert.breve}</span>
+                    {isAdmin && (() => {
+                      const sue = diviseDelGiocatore(p, divise);
+                      if (!sue.normale && !sue.libero) return <span className="roster-divisa nessuna">senza divisa</span>;
+                      return <span className="roster-divisa">divisa {[sue.normale && `n. ${sue.normale.numero} ${sue.normale.taglia}`, sue.libero && `libero n. ${sue.libero.numero} ${sue.libero.taglia}`].filter(Boolean).join(' + ')}</span>;
+                    })()}
                   </div>
                 </div>
                 <span className="roster-row-chevron">›</span>
@@ -802,6 +818,7 @@ export default function RosterPage() {
             <dl className="detail-list">
               <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
               <div><dt>Taglia divisa</dt><dd>{viewingPlayer.taglia_divisa || 'da provare'}</dd></div>
+              {isAdmin && <div><dt>Divisa assegnata</dt><dd>{testoDiviseGiocatore(diviseDelGiocatore(viewingPlayer, divise))}</dd></div>}
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
               <div><dt>Sesso</dt><dd>{viewingPlayer.sesso === 'M' ? 'Maschio' : viewingPlayer.sesso === 'F' ? 'Femmina' : '—'}</dd></div>
               <div><dt>Luogo di nascita</dt><dd>{viewingPlayer.luogo_nascita || '—'}</dd></div>

@@ -148,3 +148,16 @@ export function avvisoTaglia(tagliaDivisa: TagliaDivisa, provata: TagliaDivisa |
   if (!provata || provata === tagliaDivisa) return null;
   return `Ha provato la taglia ${provata}, questa divisa è ${tagliaDivisa}.`;
 }
+
+/** Le divise che ha un ragazzo della rosa: collegate a lui o scritte a mano con il suo nome. */
+export function diviseDelGiocatore(p: RosterPlayer, d: Divisa[]): { normale: Divisa | undefined; libero: Divisa | undefined } {
+  const nome = normalizzaNome(`${p.nome} ${p.cognome}`);
+  const sue = d.filter((x) => x.roster_id === p.id || (!x.roster_id && !!x.giocatore_nome && normalizzaNome(x.giocatore_nome) === nome));
+  return { normale: sue.find((x) => !x.libero), libero: sue.find((x) => x.libero) };
+}
+
+export function testoDiviseGiocatore(sue: { normale: Divisa | undefined; libero: Divisa | undefined }): string {
+  const una = (x: Divisa) => [`n. ${x.numero}`, x.taglia, etichettaGruppo(x.gruppo), x.pantaloncino ? '' : 'senza pantaloncino'].filter(Boolean).join(' · ');
+  const parti = [sue.normale ? una(sue.normale) : '', sue.libero ? `libero ${una(sue.libero)}` : ''].filter(Boolean);
+  return parti.length ? parti.join(' + ') : 'nessuna';
+}

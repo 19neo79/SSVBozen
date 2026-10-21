@@ -4,6 +4,8 @@ import {
   TAGLIE,
   avvisoTaglia,
   creaBlocco,
+  diviseDelGiocatore,
+  testoDiviseGiocatore,
   divisaInConflitto,
   erroreBlocco,
   nomeGiocatore,
@@ -199,5 +201,24 @@ describe('avvisoTaglia', () => {
   it('nessun avviso se la taglia coincide o non è stata provata', () => {
     expect(avvisoTaglia('M', 'M')).toBeNull();
     expect(avvisoTaglia('M', null)).toBeNull();
+  });
+});
+
+describe('diviseDelGiocatore', () => {
+  const lorenzo = ragazzo('r1', 'Lorenzo', 'Riccadonna');
+  it('trova la divisa normale e quella da libero, anche scritte a mano con il suo nome', () => {
+    const normale = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 7, gruppo: 'U14-15' });
+    const libero = d({ giocatore_nome: 'lorenzo riccadonna', libero: true, numero: 3, taglia: 'S' });
+    const altra = d({ roster_id: 'r2', giocatore_nome: 'Altro Ragazzo', numero: 9 });
+    expect(diviseDelGiocatore(lorenzo, [altra, normale, libero])).toEqual({ normale, libero });
+  });
+  it('nessuna divisa', () => {
+    expect(diviseDelGiocatore(lorenzo, [d({ numero: 4 })])).toEqual({ normale: undefined, libero: undefined });
+  });
+  it('testo per la scheda', () => {
+    const normale = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 7, gruppo: 'U14-15', taglia: 'M', pantaloncino: true });
+    const libero = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 3, libero: true, taglia: 'S' });
+    expect(testoDiviseGiocatore({ normale, libero })).toBe('n. 7 · M · U14-15 + libero n. 3 · S · Da assegnare · senza pantaloncino');
+    expect(testoDiviseGiocatore({ normale: undefined, libero: undefined })).toBe('nessuna');
   });
 });

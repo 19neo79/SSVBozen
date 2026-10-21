@@ -10,9 +10,11 @@ function errore(e: { code?: string; message: string }): Error {
   return e.code === '23505' ? new Error('Questo ragazzo ha già una divisa di questo tipo') : new Error(e.message);
 }
 
-export function useDivise() {
+/** Solo gli admin possono leggere le divise: per gli altri la richiesta non parte. */
+export function useDivise({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: KEY,
+    enabled,
     queryFn: async () => {
       const { data, error } = await supabase.from('divise').select('*').order('numero');
       if (error) throw errore(error);
@@ -40,7 +42,11 @@ export function useSalvaDivisa() {
       const { error } = await supabase.from('divise').insert(data);
       if (error) throw errore(error);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+    // Anche la rosa: il database allinea il "N. maglia" al numero della divisa normale.
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
   });
 }
 
@@ -51,7 +57,10 @@ export function useCreaDivise() {
       const { error } = await supabase.from('divise').insert(righe);
       if (error) throw errore(error);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
   });
 }
 
@@ -63,7 +72,10 @@ export function useAggiornaDivise() {
       const { error } = await supabase.from('divise').update(data).in('id', ids);
       if (error) throw errore(error);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
   });
 }
 
@@ -74,6 +86,9 @@ export function useEliminaDivise() {
       const { error } = await supabase.from('divise').delete().in('id', ids);
       if (error) throw errore(error);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['roster'] });
+    },
   });
 }
