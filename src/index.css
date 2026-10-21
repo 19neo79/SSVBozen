@@ -2175,3 +2175,194 @@ table.matrix tbody tr:nth-child(even) th {
   font-weight: 600;
   box-shadow: 0 8px 28px rgba(16, 35, 63, 0.35);
 }
+
+/* ---------- Divise ---------- */
+.divise-riepilogo {
+  margin-top: 14px;
+}
+.divise-tabella-wrap {
+  overflow-x: auto;
+}
+.divise-tabella {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 520px;
+}
+.divise-tabella th,
+.divise-tabella td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--linea);
+  text-align: center;
+  white-space: nowrap;
+}
+.divise-tabella thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--inchiostro-soft);
+}
+.divise-tabella tbody th,
+.divise-tabella tfoot th {
+  text-align: left;
+}
+.divise-tabella tfoot th,
+.divise-tabella tfoot td,
+.divise-tabella .tot {
+  font-weight: 700;
+}
+.divise-tabella tfoot td,
+.divise-tabella tfoot th {
+  border-bottom: none;
+  border-top: 2px solid var(--linea);
+}
+.divise-zero {
+  color: #b9b1a3;
+}
+.divise-lib {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b06a00;
+}
+.divise-riepilogo-piede {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.divise-senza {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--inchiostro-soft);
+}
+.divise-filtri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+.divise-filtri input[type='search'] {
+  flex: 1;
+  min-width: 180px;
+}
+.divise-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--blu);
+  color: #fff;
+  border-radius: 8px;
+}
+.divise-barra .btn.ghost {
+  background: #fff;
+}
+.divise-elimina {
+  color: var(--rosso) !important;
+}
+.divise-elenco-testa {
+  margin: 6px 0;
+}
+.divise-elenco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.divisa-riga {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--carta);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.divisa-riga:hover {
+  border-color: var(--blu);
+}
+.divisa-riga.selezionata {
+  border-color: var(--blu);
+  box-shadow: inset 0 0 0 1px var(--blu);
+}
+.divisa-numero {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--blu);
+  color: #fff;
+  font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+.divisa-numero.libero {
+  background: #e0a800;
+  color: var(--inchiostro);
+}
+.divisa-taglia {
+  flex: none;
+  min-width: 42px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+.divisa-info {
+  flex: 1;
+  min-width: 0;
+}
+.divisa-tag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.divisa-gruppo {
+  color: var(--blu);
+}
+.divisa-gruppo.nessuno {
+  color: var(--inchiostro-soft);
+}
+.divisa-libero {
+  color: #b06a00;
+}
+.divisa-doppio {
+  color: var(--rosso);
+}
+.divisa-giocatore {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.divisa-giocatore.libera {
+  color: var(--inchiostro-soft);
+  font-weight: 400;
+  font-style: italic;
+}
+.divisa-fuori {
+  color: var(--rosso);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 13px;
+}
+.divisa-note {
+  font-size: 12.5px;
+  color: var(--inchiostro-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

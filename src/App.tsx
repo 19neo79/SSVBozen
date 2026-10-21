@@ -10,6 +10,7 @@ import MatchesPage from './pages/MatchesPage';
 import WeekPlanPage from './pages/WeekPlanPage';
 import StatsPage from './pages/StatsPage';
 import ReportMensilePage from './pages/ReportMensilePage';
+import DivisePage from './pages/DivisePage';
 import RosterPage from './pages/RosterPage';
 import StaffPage from './pages/StaffPage';
 import VenuesPage from './pages/VenuesPage';
@@ -39,6 +40,14 @@ function App() {
         <Route path="statistiche/report" element={<ReportMensilePage />} />
         <Route path="rosa" element={<RosterPage />} />
         <Route path="staff" element={<StaffPage />} />
+        <Route
+          path="divise"
+          element={
+            <RequireAdmin>
+              <DivisePage />
+            </RequireAdmin>
+          }
+        />
         <Route
           path="palestre"
           element={
