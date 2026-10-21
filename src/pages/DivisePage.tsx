@@ -3,6 +3,7 @@ import { useUi } from '../contexts/UiContext';
 import { useAggiornaDivise, useDivise, useEliminaDivise } from '../hooks/useDivise';
 import { useRoster } from '../hooks/useRoster';
 import { BloccoDivise } from '../components/BloccoDivise';
+import { EsportaDivise } from '../components/EsportaDivise';
 import { FormDivisa } from '../components/FormDivisa';
 import {
   COLONNE_RIEPILOGO,
@@ -264,6 +265,7 @@ export default function DivisePage() {
 
       {aperto?.tipo === 'divisa' && <FormDivisa divisa={aperto.divisa} divise={divise} rosa={rosa} onChiudi={() => setAperto(null)} />}
       {aperto?.tipo === 'blocco' && <BloccoDivise onChiudi={() => setAperto(null)} />}
+      {aperto?.tipo === 'esporta' && <EsportaDivise divise={divise} rosa={rosa} onChiudi={() => setAperto(null)} />}
     </section>
   );
 }
