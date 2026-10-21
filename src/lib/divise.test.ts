@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Divisa, RosterPlayer } from '../types/database';
 import {
+  TAGLIE,
+  avvisoTaglia,
   creaBlocco,
   divisaInConflitto,
   erroreBlocco,
@@ -46,7 +48,7 @@ describe('normalizzaNome', () => {
 describe('riepilogo', () => {
   it('conta per taglia e gruppo, con i liberi a parte', () => {
     const r = riepilogo([d({ taglia: 'M', pantaloncino: true }), d({ taglia: 'M', libero: true }), d({ taglia: 'L', gruppo: 'U17', giocatore_nome: 'A B', pantaloncino: true })]);
-    expect(r.righe).toHaveLength(7);
+    expect(r.righe).toHaveLength(4);
     expect(r.righe.find((x) => x.taglia === 'M')!.celle.nessuno).toEqual({ totale: 2, libero: 1, pantaloncini: 1 });
     expect(r.totali.totale.pantaloncini).toBe(2);
     expect(r.righe.find((x) => x.taglia === 'L')!.celle.U17.totale).toBe(1);
@@ -181,5 +183,21 @@ describe('numeriGiaPresenti', () => {
   });
   it('senza gruppo non segnala nulla, come per i numeri doppi', () => {
     expect(numeriGiaPresenti([d({ numero: 3 })], { gruppo: null, da: 1, a: 14, taglia: 'M', libero: false, pantaloncino: false })).toEqual([]);
+  });
+});
+
+describe('taglie', () => {
+  it('solo le taglie delle divise della società', () => {
+    expect(TAGLIE).toEqual(['S', 'M', 'L', 'XL']);
+  });
+});
+
+describe('avvisoTaglia', () => {
+  it('avvisa se la divisa non è della taglia provata', () => {
+    expect(avvisoTaglia('L', 'M')).toBe('Ha provato la taglia M, questa divisa è L.');
+  });
+  it('nessun avviso se la taglia coincide o non è stata provata', () => {
+    expect(avvisoTaglia('M', 'M')).toBeNull();
+    expect(avvisoTaglia('M', null)).toBeNull();
   });
 });

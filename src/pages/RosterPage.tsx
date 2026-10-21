@@ -6,7 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apriImmagine, caricaFoto, creaFoto, eliminaFoto, impostaFotoAtleta, type FotoPreparate, type Ritaglio } from '../lib/fotoAtleti';
 import { RitaglioFoto } from '../components/RitaglioFoto';
 import { FotoAtleta } from '../components/ui/FotoAtleta';
-import type { RosterPlayer } from '../types/database';
+import type { RosterPlayer, TagliaDivisa } from '../types/database';
+import { TAGLIE } from '../lib/divise';
 import { CategoriaTag } from '../components/ui/CategoriaTag';
 import { EsportaAtleti } from '../components/EsportaAtleti';
 import { fmtDateShort, isoToItalian, normalizeDateInput } from '../lib/dates';
@@ -43,6 +44,7 @@ const CSV_HEADER_MAP: Record<string, string> = {
   cap: 'indirizzo_cap',
   via: 'indirizzo_via', indirizzo: 'indirizzo_via',
   civico: 'indirizzo_civico', ncivico: 'indirizzo_civico', numerocivico: 'indirizzo_civico',
+  tagliadivisa: 'taglia_divisa', taglia: 'taglia_divisa',
 };
 
 const emptyForm = {
@@ -51,6 +53,7 @@ const emptyForm = {
   solo_u15: false,
   sesso: '' as '' | Sesso, luogo_nascita: '', luogo_nascita_cc: '',
   indirizzo_comune: '', indirizzo_comune_cc: '', indirizzo_cap: '', indirizzo_via: '', indirizzo_civico: '',
+  taglia_divisa: '' as '' | TagliaDivisa,
 };
 
 function certStatus(p: RosterPlayer, today: Date, soon: Date): { label: string; warn: boolean; stato: string; breve: string } {
@@ -271,6 +274,7 @@ export default function RosterPage() {
         sesso: p.sesso || '', luogo_nascita: p.luogo_nascita || '', luogo_nascita_cc: p.luogo_nascita_cc || '',
         indirizzo_comune: p.indirizzo_comune || '', indirizzo_comune_cc: p.indirizzo_comune_cc || '',
         indirizzo_cap: p.indirizzo_cap || '', indirizzo_via: p.indirizzo_via || '', indirizzo_civico: p.indirizzo_civico || '',
+        taglia_divisa: p.taglia_divisa || '',
       });
     } else {
       setEditingId(null);
@@ -328,6 +332,7 @@ export default function RosterPage() {
       indirizzo_cap: form.indirizzo_cap.trim() || null,
       indirizzo_via: form.indirizzo_via.trim() || null,
       indirizzo_civico: form.indirizzo_civico.trim() || null,
+      taglia_divisa: form.taglia_divisa || null,
     };
     try {
       const id = await savePlayer.mutateAsync({ id: editingId, data });
@@ -383,8 +388,8 @@ export default function RosterPage() {
   }
 
   function downloadTemplate() {
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico'];
-    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027', 'M', 'BOLZANO (BZ)', 'Bolzano', '39100', 'Via Armando Diaz', '34'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico', 'Taglia divisa'];
+    const example = ['Mario', 'Rossi', '7', '15/03/2011', 'RSSMRA11C15B563X', 'Schiacciatore', '+39 333 9998877', 'Luca', '+39 333 1234567', 'Anna', '+39 333 7654321', '10/01/2027', 'M', 'BOLZANO (BZ)', 'Bolzano', '39100', 'Via Armando Diaz', '34', 'M'];
     const csv = headers.join(';') + '\n' + example.map(csvEscape).join(';');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -396,13 +401,14 @@ export default function RosterPage() {
 
   function exportCSV() {
     if (roster.length === 0) { showToast('Nessun giocatore da esportare'); return; }
-    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico'];
+    const headers = ['Nome', 'Cognome', 'Numero maglia', 'Data di nascita', 'Codice Fiscale', 'Ruolo', 'Cellulare atleta', 'Nome papà', 'Telefono papà', 'Nome mamma', 'Telefono mamma', 'Scadenza certificato medico', 'Sesso', 'Luogo di nascita', 'Comune', 'CAP', 'Via', 'Civico', 'Taglia divisa'];
     const rows = roster.map((p) => [
       p.nome || '', p.cognome || '', p.numero ?? '', isoToItalian(p.data_nascita), p.codice_fiscale || '', p.ruolo || '',
       p.telefono_atleta || '', p.nome_papa || '', p.telefono_papa || '', p.nome_mamma || '', p.telefono_mamma || '',
       isoToItalian(p.certificato),
       p.sesso || '', p.luogo_nascita || '',
       p.indirizzo_comune || '', p.indirizzo_cap || '', p.indirizzo_via || '', p.indirizzo_civico || '',
+      p.taglia_divisa || '',
     ]);
     downloadCSV('rosa_export.csv', headers, rows);
   }
@@ -467,6 +473,10 @@ export default function RosterPage() {
       if ('indirizzo_cap' in rec) playerData.indirizzo_cap = rec.indirizzo_cap || playerData.indirizzo_cap || null;
       if ('indirizzo_via' in rec) playerData.indirizzo_via = rec.indirizzo_via || null;
       if ('indirizzo_civico' in rec) playerData.indirizzo_civico = rec.indirizzo_civico || null;
+      if ('taglia_divisa' in rec) {
+        const t = rec.taglia_divisa.trim().toUpperCase();
+        playerData.taglia_divisa = (TAGLIE as string[]).includes(t) ? (t as TagliaDivisa) : null;
+      }
       const existing = codiceFiscale ? roster.find((p) => p.codice_fiscale && p.codice_fiscale === codiceFiscale) : null;
       if (existing) {
         rowsToUpsert.push({ id: existing.id, ...playerData });
@@ -610,6 +620,13 @@ export default function RosterPage() {
               </select>
             </div>
             <div className="field"><label>Cellulare atleta</label><input style={{ width: 150 }} value={form.telefono_atleta} onChange={(e) => setForm({ ...form, telefono_atleta: e.target.value })} /></div>
+            <div className="field">
+              <label htmlFor="taglia-divisa">Taglia divisa</label>
+              <select id="taglia-divisa" style={{ width: 130 }} value={form.taglia_divisa} onChange={(e) => setForm({ ...form, taglia_divisa: e.target.value as '' | TagliaDivisa })}>
+                <option value="">— da provare —</option>
+                {TAGLIE.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
           </div>
           <div className="field" style={{ marginTop: 16 }}>
             <label style={{ fontSize: 13.5 }}>Residenza</label>
@@ -784,6 +801,7 @@ export default function RosterPage() {
             </div>
             <dl className="detail-list">
               <div><dt>Ruolo</dt><dd>{viewingPlayer.ruolo || '—'}</dd></div>
+              <div><dt>Taglia divisa</dt><dd>{viewingPlayer.taglia_divisa || 'da provare'}</dd></div>
               <div><dt>Data di nascita</dt><dd>{viewingPlayer.data_nascita ? fmtDateShort(viewingPlayer.data_nascita) : '—'}</dd></div>
               <div><dt>Sesso</dt><dd>{viewingPlayer.sesso === 'M' ? 'Maschio' : viewingPlayer.sesso === 'F' ? 'Femmina' : '—'}</dd></div>
               <div><dt>Luogo di nascita</dt><dd>{viewingPlayer.luogo_nascita || '—'}</dd></div>

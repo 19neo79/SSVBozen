@@ -1,7 +1,8 @@
 import type { Divisa, GruppoDivisa, RosterPlayer, TagliaDivisa } from '../types/database';
 
 export const GRUPPI_DIVISA: GruppoDivisa[] = ['U17', 'U14-15', 'U12-13'];
-export const TAGLIE: TagliaDivisa[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+// Le divise della società vanno dalla S alla XL.
+export const TAGLIE: TagliaDivisa[] = ['S', 'M', 'L', 'XL'];
 
 export function etichettaGruppo(g: GruppoDivisa | null): string {
   return g ?? 'Da assegnare';
@@ -140,4 +141,10 @@ export function numeriGiaPresenti(d: Divisa[], b: Blocco): number[] {
   if (!b.gruppo) return [];
   const usati = new Set(d.filter((x) => x.gruppo === b.gruppo && x.libero === b.libero).map((x) => x.numero));
   return creaBlocco(b).map((x) => x.numero).filter((n) => usati.has(n));
+}
+
+/** Avviso (non blocco) se si assegna una divisa di taglia diversa da quella provata dal ragazzo. */
+export function avvisoTaglia(tagliaDivisa: TagliaDivisa, provata: TagliaDivisa | null): string | null {
+  if (!provata || provata === tagliaDivisa) return null;
+  return `Ha provato la taglia ${provata}, questa divisa è ${tagliaDivisa}.`;
 }

@@ -12,7 +12,7 @@ export const GRUPPI_DATI: { id: GruppoDati; label: string }[] = [
   { id: 'contattiAtleta', label: 'Cellulare atleta' },
   { id: 'genitori', label: 'Genitori e telefoni' },
   { id: 'certificato', label: 'Certificato medico' },
-  { id: 'squadra', label: 'Categoria, maglia e ruolo' },
+  { id: 'squadra', label: 'Categoria, maglia, ruolo e taglia divisa' },
 ];
 
 export function categoriaAtleta(p: RosterPlayer): string {
@@ -33,6 +33,7 @@ function colonne(gruppi: Set<GruppoDati>): { titolo: string; valore: (p: RosterP
     c.push({ titolo: 'Categoria', valore: categoriaAtleta });
     c.push({ titolo: 'N. maglia', valore: (p) => p.numero ?? '' });
     c.push({ titolo: 'Ruolo', valore: (p) => p.ruolo || '' });
+    c.push({ titolo: 'Taglia divisa', valore: (p) => p.taglia_divisa || '' });
   }
   if (gruppi.has('anagrafica')) {
     c.push({ titolo: 'Data di nascita', valore: (p) => isoToItalian(p.data_nascita) });
@@ -75,7 +76,7 @@ export function testoWhatsAppAtleti(atleti: RosterPlayer[], gruppi: Set<GruppoDa
     .map((p) => {
       const righe = [`*${p.cognome} ${p.nome}*`];
       if (gruppi.has('squadra')) {
-        const sq = [categoriaAtleta(p), p.numero != null ? `maglia ${p.numero}` : '', p.ruolo || ''].filter(Boolean).join(' · ');
+        const sq = [categoriaAtleta(p), p.numero != null ? `maglia ${p.numero}` : '', p.ruolo || '', p.taglia_divisa ? `taglia ${p.taglia_divisa}` : ''].filter(Boolean).join(' · ');
         if (sq) righe.push(sq);
       }
       if (gruppi.has('anagrafica') && (p.data_nascita || p.luogo_nascita)) {

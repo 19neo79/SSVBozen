@@ -188,7 +188,7 @@ export default function DivisePage() {
           </button>
         </div>
         {mostraSenza && senzaDivisa.length > 0 && (
-          <div className="divise-senza">{senzaDivisa.map((p) => `${p.nome} ${p.cognome}`).join(' · ')}</div>
+          <div className="divise-senza">{senzaDivisa.map((p) => `${p.nome} ${p.cognome}${p.taglia_divisa ? ` (${p.taglia_divisa})` : ''}`).join(' · ')}</div>
         )}
       </div>
       )}

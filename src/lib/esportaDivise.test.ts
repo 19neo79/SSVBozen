@@ -58,7 +58,7 @@ describe('righeRiepilogoExcel', () => {
     expect(righe[0]).toEqual(['Taglia', 'U17 maglie', 'di cui libero', 'U17 pantaloncini', 'Totale maglie', 'di cui libero', 'Totale pantaloncini']);
     expect(righe.find((r) => r[0] === 'M')).toEqual(['M', 2, 1, 1, 2, 1, 1]);
     expect(righe[righe.length - 1]).toEqual(['Totale', 2, 1, 1, 2, 1, 1]);
-    expect(righe).toHaveLength(9);
+    expect(righe).toHaveLength(6);
   });
 });
 

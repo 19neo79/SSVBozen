@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useEliminaDivise, useSalvaDivisa } from '../hooks/useDivise';
-import { GRUPPI_DIVISA, TAGLIE, divisaInConflitto, etichettaGruppo, nomeGiocatore, normalizzaNome } from '../lib/divise';
+import { GRUPPI_DIVISA, TAGLIE, avvisoTaglia, divisaInConflitto, etichettaGruppo, nomeGiocatore, normalizzaNome } from '../lib/divise';
 import type { Divisa, GruppoDivisa, RosterPlayer, TagliaDivisa } from '../types/database';
 
 /** Blocca lo scroll della pagina sotto un popup, come nella Rosa. */
@@ -133,13 +133,18 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
           />
           <datalist id="divisa-rosa">
             {[...rosa].sort((a, b) => a.cognome.localeCompare(b.cognome, 'it')).map((p) => (
-              <option key={p.id} value={nomeRosa(p)} label={etichetteRosa.get(p.id)} />
+              <option key={p.id} value={nomeRosa(p)} label={[p.taglia_divisa ? `taglia ${p.taglia_divisa}` : '', etichetteRosa.get(p.id) || ''].filter(Boolean).join(' · ') || undefined} />
             ))}
           </datalist>
           {giocatore.trim() && (
-            <span className="muted" style={{ fontSize: 12 }}>{ragazzo ? 'Dalla rosa' : rosterId ? 'Non più in rosa' : 'Nome scritto a mano (non in rosa)'}</span>
+            <span className="muted" style={{ fontSize: 12 }}>
+              {ragazzo ? `Dalla rosa · taglia provata: ${ragazzo.taglia_divisa || 'non ancora'}` : rosterId ? 'Non più in rosa' : 'Nome scritto a mano (non in rosa)'}
+            </span>
           )}
         </div>
+        {ragazzo && avvisoTaglia(taglia, ragazzo.taglia_divisa) && (
+          <div className="divisa-avviso">⚠ {avvisoTaglia(taglia, ragazzo.taglia_divisa)} Puoi salvare lo stesso.</div>
+        )}
         {conflitto && (
           <div className="divisa-conflitto">
             <span>

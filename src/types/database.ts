@@ -54,6 +54,8 @@ export interface RosterPlayer {
   indirizzo_cap: string | null;
   indirizzo_via: string | null;
   indirizzo_civico: string | null;
+  /** Taglia provata per la divisa. */
+  taglia_divisa: TagliaDivisa | null;
   foto_path: string | null;
   foto_intera_path: string | null;
   foto_busto_path: string | null;
@@ -192,7 +194,7 @@ export interface ReportCommento {
 }
 
 export type GruppoDivisa = 'U17' | 'U14-15' | 'U12-13';
-export type TagliaDivisa = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL';
+export type TagliaDivisa = 'S' | 'M' | 'L' | 'XL';
 
 /** Maglia con numero + pantaloncino della stessa taglia. gruppo null = da assegnare. */
 export interface Divisa {
