@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useAggiornaDivise, useDivise, useEliminaDivise } from '../hooks/useDivise';
 import { useRoster } from '../hooks/useRoster';
+import { BloccoDivise } from '../components/BloccoDivise';
+import { FormDivisa } from '../components/FormDivisa';
 import {
   COLONNE_RIEPILOGO,
   GRUPPI_DIVISA,
@@ -260,7 +262,8 @@ export default function DivisePage() {
         </>
       )}
 
-      {aperto && null}
+      {aperto?.tipo === 'divisa' && <FormDivisa divisa={aperto.divisa} divise={divise} rosa={rosa} onChiudi={() => setAperto(null)} />}
+      {aperto?.tipo === 'blocco' && <BloccoDivise onChiudi={() => setAperto(null)} />}
     </section>
   );
 }

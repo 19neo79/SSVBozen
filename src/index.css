@@ -2366,3 +2366,43 @@ table.matrix tbody tr:nth-child(even) th {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.modale-divisa {
+  max-width: 560px;
+}
+.modale-divisa textarea {
+  width: 100%;
+  font: inherit;
+}
+.modale-divisa #divisa-giocatore {
+  width: 100%;
+}
+.divisa-avviso,
+.divisa-anteprima,
+.divisa-conflitto {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.divisa-avviso {
+  background: #fff4d6;
+  color: #7a5200;
+}
+.divisa-anteprima {
+  background: #eef3fa;
+  color: var(--blu);
+  font-weight: 600;
+}
+.divisa-conflitto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #fdecef;
+  color: var(--rosso-scuro);
+}
+.divisa-sposta-ok {
+  font-weight: 700;
+  color: #1a7a34;
+}
