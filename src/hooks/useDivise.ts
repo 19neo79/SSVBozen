@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import type { NuovaDivisa } from '../lib/divise';
 import type { Divisa } from '../types/database';
 
 const KEY = ['divise'];
@@ -46,7 +47,7 @@ export function useSalvaDivisa() {
 export function useCreaDivise() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (righe: Pick<Divisa, 'gruppo' | 'numero' | 'taglia' | 'libero'>[]) => {
+    mutationFn: async (righe: NuovaDivisa[]) => {
       const { error } = await supabase.from('divise').insert(righe);
       if (error) throw errore(error);
     },

@@ -28,9 +28,10 @@ interface Filtri {
   taglia: 'tutte' | TagliaDivisa;
   tipo: 'tutte' | 'normali' | 'libero';
   stato: 'tutte' | 'assegnate' | 'libere';
+  pantaloncino: 'tutte' | 'con' | 'senza';
   testo: string;
 }
-const FILTRI_INIZIALI: Filtri = { gruppo: 'tutti', taglia: 'tutte', tipo: 'tutte', stato: 'tutte', testo: '' };
+const FILTRI_INIZIALI: Filtri = { gruppo: 'tutti', taglia: 'tutte', tipo: 'tutte', stato: 'tutte', pantaloncino: 'tutte', testo: '' };
 
 export type Aperto = { tipo: 'divisa'; divisa: Divisa | null } | { tipo: 'blocco' } | { tipo: 'esporta' } | null;
 
@@ -42,6 +43,7 @@ function Cella({ c }: { c: CellaRiepilogo }) {
     <>
       {c.totale}
       {c.libero > 0 && <span className="divise-lib"> · {c.libero} lib.</span>}
+      {c.totale > c.pantaloncini && <span className="divise-senza-pant"> · {c.totale - c.pantaloncini} senza pant.</span>}
     </>
   );
 }
@@ -70,6 +72,7 @@ export default function DivisePage() {
         if (filtri.taglia !== 'tutte' && x.taglia !== filtri.taglia) return false;
         if (filtri.tipo !== 'tutte' && x.libero !== (filtri.tipo === 'libero')) return false;
         if (filtri.stato !== 'tutte' && !!x.giocatore_nome !== (filtri.stato === 'assegnate')) return false;
+        if (filtri.pantaloncino !== 'tutte' && x.pantaloncino !== (filtri.pantaloncino === 'con')) return false;
         if (!testo) return true;
         if (/^\d+$/.test(testo) && x.numero === Number(testo)) return true;
         const nome = nomeGiocatore(x, rosa).nome;
@@ -102,6 +105,15 @@ export default function DivisePage() {
       await aggiorna.mutateAsync({ ids: selezionate, data: { gruppo } });
       showToast(`${selezionate.length} divise spostate in ${etichettaGruppo(gruppo)}`);
       setSelezione(new Set());
+    } catch (e) {
+      showToast((e as Error).message);
+    }
+  }
+
+  async function segnaPantaloncino(pantaloncino: boolean) {
+    try {
+      await aggiorna.mutateAsync({ ids: selezionate, data: { pantaloncino } });
+      showToast(`${selezionate.length} divise segnate ${pantaloncino ? 'con' : 'senza'} pantaloncino`);
     } catch (e) {
       showToast((e as Error).message);
     }
@@ -165,7 +177,12 @@ export default function DivisePage() {
           </table>
         </div>
         <div className="divise-riepilogo-piede">
-          <span>Assegnate <strong>{r.assegnate}</strong> · Libere <strong>{r.libere}</strong></span>
+          <span>
+            Maglie <strong>{r.totali.totale.totale}</strong> · Pantaloncini <strong>{r.totali.totale.pantaloncini}</strong>
+            {r.totali.totale.totale > r.totali.totale.pantaloncini && <> · Senza pantaloncino <strong>{r.totali.totale.totale - r.totali.totale.pantaloncini}</strong></>}
+            <br />
+            Assegnate <strong>{r.assegnate}</strong> · Libere <strong>{r.libere}</strong>
+          </span>
           <button type="button" className="btn ghost small" onClick={() => setMostraSenza((v) => !v)} disabled={!senzaDivisa.length}>
             Ragazzi della rosa senza divisa: {senzaDivisa.length}
           </button>
@@ -196,6 +213,11 @@ export default function DivisePage() {
           <option value="assegnate">Solo assegnate</option>
           <option value="libere">Solo libere</option>
         </select>
+        <select aria-label="Pantaloncino" value={filtri.pantaloncino} onChange={(e) => setFiltri({ ...filtri, pantaloncino: e.target.value as Filtri['pantaloncino'] })}>
+          <option value="tutte">Con e senza pantaloncino</option>
+          <option value="con">Solo con pantaloncino</option>
+          <option value="senza">Solo senza pantaloncino</option>
+        </select>
         <input type="search" placeholder="Cerca nome o numero…" value={filtri.testo} onChange={(e) => setFiltri({ ...filtri, testo: e.target.value })} />
       </div>
 
@@ -207,6 +229,8 @@ export default function DivisePage() {
             {GRUPPI_DIVISA.map((g) => <option key={g} value={g}>{g}</option>)}
             <option value="nessuno">Da assegnare</option>
           </select>
+          <button type="button" className="btn ghost small" onClick={() => segnaPantaloncino(true)} disabled={aggiorna.isPending}>Con pantaloncino</button>
+          <button type="button" className="btn ghost small" onClick={() => segnaPantaloncino(false)} disabled={aggiorna.isPending}>Senza pantaloncino</button>
           <button type="button" className="btn ghost small" onClick={togliGiocatore} disabled={aggiorna.isPending}>Togli giocatore</button>
           <button type="button" className="btn ghost small divise-elimina" onClick={eliminaSelezionate} disabled={elimina.isPending}>Elimina</button>
           <button type="button" className="btn ghost small" onClick={() => setSelezione(new Set())}>Deseleziona</button>
@@ -256,6 +280,7 @@ export default function DivisePage() {
                     <div className="divisa-tag">
                       <span className={`divisa-gruppo${x.gruppo ? '' : ' nessuno'}`}>{etichettaGruppo(x.gruppo)}</span>
                       {x.libero && <span className="divisa-libero">Libero</span>}
+                      {!x.pantaloncino && <span className="divisa-senza-pant">Senza pantaloncino</span>}
                       {doppi.has(x.id) && <span className="divisa-doppio" title="Numero già usato in questo gruppo">⚠ numero doppio</span>}
                     </div>
                     <div className={`divisa-giocatore${nome ? '' : ' libera'}`}>

@@ -23,6 +23,7 @@ function d(over: Partial<Divisa>): Divisa {
     numero: 1,
     taglia: 'M',
     libero: false,
+    pantaloncino: false,
     roster_id: null,
     giocatore_nome: null,
     note: null,
@@ -44,9 +45,10 @@ describe('normalizzaNome', () => {
 
 describe('riepilogo', () => {
   it('conta per taglia e gruppo, con i liberi a parte', () => {
-    const r = riepilogo([d({ taglia: 'M' }), d({ taglia: 'M', libero: true }), d({ taglia: 'L', gruppo: 'U17', giocatore_nome: 'A B' })]);
+    const r = riepilogo([d({ taglia: 'M', pantaloncino: true }), d({ taglia: 'M', libero: true }), d({ taglia: 'L', gruppo: 'U17', giocatore_nome: 'A B', pantaloncino: true })]);
     expect(r.righe).toHaveLength(7);
-    expect(r.righe.find((x) => x.taglia === 'M')!.celle.nessuno).toEqual({ totale: 2, libero: 1 });
+    expect(r.righe.find((x) => x.taglia === 'M')!.celle.nessuno).toEqual({ totale: 2, libero: 1, pantaloncini: 1 });
+    expect(r.totali.totale.pantaloncini).toBe(2);
     expect(r.righe.find((x) => x.taglia === 'L')!.celle.U17.totale).toBe(1);
     expect(r.righe.find((x) => x.taglia === 'L')!.celle.totale.totale).toBe(1);
     expect(r.totali.totale.totale).toBe(3);
@@ -106,21 +108,21 @@ describe('divisaInConflitto', () => {
 
 describe('blocchi', () => {
   it('rifiuta un intervallo al contrario', () => {
-    expect(erroreBlocco({ gruppo: null, da: 5, a: 3, taglia: 'M', libero: false })).not.toBeNull();
+    expect(erroreBlocco({ gruppo: null, da: 5, a: 3, taglia: 'M', libero: false, pantaloncino: false })).not.toBeNull();
   });
   it('rifiuta numeri oltre il 99', () => {
-    expect(erroreBlocco({ gruppo: null, da: 0, a: 100, taglia: 'M', libero: false })).not.toBeNull();
+    expect(erroreBlocco({ gruppo: null, da: 0, a: 100, taglia: 'M', libero: false, pantaloncino: false })).not.toBeNull();
   });
   it('rifiuta numeri non interi', () => {
-    expect(erroreBlocco({ gruppo: null, da: 1.5, a: 3, taglia: 'M', libero: false })).not.toBeNull();
+    expect(erroreBlocco({ gruppo: null, da: 1.5, a: 3, taglia: 'M', libero: false, pantaloncino: false })).not.toBeNull();
   });
   it('accetta 1–14 e crea 14 divise', () => {
-    const b = { gruppo: null, da: 1, a: 14, taglia: 'M' as const, libero: false };
+    const b = { gruppo: null, da: 1, a: 14, taglia: 'M' as const, libero: false, pantaloncino: true };
     expect(erroreBlocco(b)).toBeNull();
     const righe = creaBlocco(b);
     expect(righe).toHaveLength(14);
     expect(righe.map((r) => r.numero)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
-    expect(righe[0]).toEqual({ gruppo: null, numero: 1, taglia: 'M', libero: false });
+    expect(righe[0]).toEqual({ gruppo: null, numero: 1, taglia: 'M', libero: false, pantaloncino: true });
   });
 });
 
@@ -175,9 +177,9 @@ describe('selezioneVisibile', () => {
 describe('numeriGiaPresenti', () => {
   it('trova i numeri del blocco già usati nello stesso gruppo e tipo', () => {
     const lista = [d({ gruppo: 'U17', numero: 3 }), d({ gruppo: 'U17', numero: 5, libero: true }), d({ gruppo: 'U14-15', numero: 4 }), d({ gruppo: 'U17', numero: 20 })];
-    expect(numeriGiaPresenti(lista, { gruppo: 'U17', da: 1, a: 14, taglia: 'M', libero: false })).toEqual([3]);
+    expect(numeriGiaPresenti(lista, { gruppo: 'U17', da: 1, a: 14, taglia: 'M', libero: false, pantaloncino: false })).toEqual([3]);
   });
   it('senza gruppo non segnala nulla, come per i numeri doppi', () => {
-    expect(numeriGiaPresenti([d({ numero: 3 })], { gruppo: null, da: 1, a: 14, taglia: 'M', libero: false })).toEqual([]);
+    expect(numeriGiaPresenti([d({ numero: 3 })], { gruppo: null, da: 1, a: 14, taglia: 'M', libero: false, pantaloncino: false })).toEqual([]);
   });
 });

@@ -2409,3 +2409,11 @@ table.matrix tbody tr:nth-child(even) th {
 .divise-errore {
   color: var(--rosso-scuro);
 }
+.divise-senza-pant {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rosso);
+}
+.divisa-senza-pant {
+  color: var(--rosso);
+}

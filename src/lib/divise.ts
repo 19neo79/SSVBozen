@@ -20,8 +20,10 @@ export function ordinaDivise(d: Divisa[]): Divisa[] {
 
 export type ColonnaRiepilogo = GruppoDivisa | 'nessuno' | 'totale';
 export interface CellaRiepilogo {
+  /** Maglie. */
   totale: number;
   libero: number;
+  pantaloncini: number;
 }
 export interface Riepilogo {
   righe: { taglia: TagliaDivisa; celle: Record<ColonnaRiepilogo, CellaRiepilogo> }[];
@@ -33,10 +35,10 @@ export interface Riepilogo {
 export const COLONNE_RIEPILOGO: ColonnaRiepilogo[] = [...GRUPPI_DIVISA, 'nessuno', 'totale'];
 
 function celleVuote(): Record<ColonnaRiepilogo, CellaRiepilogo> {
-  return Object.fromEntries(COLONNE_RIEPILOGO.map((c) => [c, { totale: 0, libero: 0 }])) as Record<ColonnaRiepilogo, CellaRiepilogo>;
+  return Object.fromEntries(COLONNE_RIEPILOGO.map((c) => [c, { totale: 0, libero: 0, pantaloncini: 0 }])) as Record<ColonnaRiepilogo, CellaRiepilogo>;
 }
 
-/** Quante divise per taglia (righe) e gruppo (colonne), con quante sono da libero. */
+/** Quante maglie per taglia (righe) e gruppo (colonne), con quante sono da libero e quanti pantaloncini. */
 export function riepilogo(d: Divisa[]): Riepilogo {
   const righe = TAGLIE.map((taglia) => ({ taglia, celle: celleVuote() }));
   const totali = celleVuote();
@@ -47,6 +49,7 @@ export function riepilogo(d: Divisa[]): Riepilogo {
       for (const celle of riga ? [riga.celle, totali] : [totali]) {
         celle[col].totale += 1;
         if (x.libero) celle[col].libero += 1;
+        if (x.pantaloncino) celle[col].pantaloncini += 1;
       }
     }
     if (x.giocatore_nome) assegnate += 1;
@@ -94,6 +97,7 @@ export interface Blocco {
   a: number;
   taglia: TagliaDivisa;
   libero: boolean;
+  pantaloncino: boolean;
 }
 
 export function erroreBlocco(b: Blocco): string | null {
@@ -102,8 +106,11 @@ export function erroreBlocco(b: Blocco): string | null {
   return null;
 }
 
-export function creaBlocco(b: Blocco): Pick<Divisa, 'gruppo' | 'numero' | 'taglia' | 'libero'>[] {
-  return Array.from({ length: b.a - b.da + 1 }, (_, i) => ({ gruppo: b.gruppo, numero: b.da + i, taglia: b.taglia, libero: b.libero }));
+export type NuovaDivisa = Pick<Divisa, 'gruppo' | 'numero' | 'taglia' | 'libero' | 'pantaloncino'>;
+
+/** Tutte le righe hanno le stesse colonne: con un insert multiplo quelle mancanti diventerebbero null. */
+export function creaBlocco(b: Blocco): NuovaDivisa[] {
+  return Array.from({ length: b.a - b.da + 1 }, (_, i) => ({ gruppo: b.gruppo, numero: b.da + i, taglia: b.taglia, libero: b.libero, pantaloncino: b.pantaloncino }));
 }
 
 /** Nome da mostrare: quello attuale della rosa se il ragazzo c'è ancora, altrimenti quello salvato. */

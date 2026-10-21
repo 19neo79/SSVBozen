@@ -25,6 +25,7 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
   const [numero, setNumero] = useState(divisa ? String(divisa.numero) : '');
   const [taglia, setTaglia] = useState<TagliaDivisa>(divisa?.taglia ?? 'M');
   const [libero, setLibero] = useState(divisa?.libero ?? false);
+  const [pantaloncino, setPantaloncino] = useState(divisa?.pantaloncino ?? false);
   const [giocatore, setGiocatore] = useState(() => (divisa ? nomeGiocatore(divisa, rosa).nome ?? '' : ''));
   const [note, setNote] = useState(divisa?.note ?? '');
   const [sposta, setSposta] = useState(false);
@@ -64,7 +65,7 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
     try {
       await salva.mutateAsync({
         id: divisa?.id ?? null,
-        data: { gruppo: gruppo || null, numero: n, taglia, libero, roster_id: nomeSalvato ? rosterId : null, giocatore_nome: nomeSalvato, note: note.trim() || null },
+        data: { gruppo: gruppo || null, numero: n, taglia, libero, pantaloncino, roster_id: nomeSalvato ? rosterId : null, giocatore_nome: nomeSalvato, note: note.trim() || null },
         liberaPrima: conflitto && sposta ? conflitto.id : undefined,
       });
       showToast(divisa ? 'Divisa salvata' : 'Divisa aggiunta');
@@ -114,6 +115,10 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
         <label className="chk" style={{ marginTop: 12 }}>
           <input type="checkbox" checked={libero} onChange={(e) => setLibero(e.target.checked)} />
           Maglia da libero (colore diverso)
+        </label>
+        <label className="chk" style={{ marginTop: 8 }}>
+          <input type="checkbox" checked={pantaloncino} onChange={(e) => setPantaloncino(e.target.checked)} />
+          Con pantaloncino
         </label>
         {doppio && <div className="divisa-avviso">⚠ In {gruppo} c'è già una maglia {libero ? 'da libero ' : ''}con il n. {n}. Puoi salvare lo stesso.</div>}
 

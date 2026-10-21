@@ -15,8 +15,9 @@ export function BloccoDivise({ divise, onChiudi }: { divise: Divisa[]; onChiudi:
   const [a, setA] = useState('14');
   const [taglia, setTaglia] = useState<TagliaDivisa>('M');
   const [libero, setLibero] = useState(false);
+  const [pantaloncino, setPantaloncino] = useState(false);
 
-  const blocco: Blocco = { gruppo: gruppo || null, da: da === '' ? NaN : Number(da), a: a === '' ? NaN : Number(a), taglia, libero };
+  const blocco: Blocco = { gruppo: gruppo || null, da: da === '' ? NaN : Number(da), a: a === '' ? NaN : Number(a), taglia, libero, pantaloncino };
   const errore = erroreBlocco(blocco);
   const quante = errore ? 0 : blocco.a - blocco.da + 1;
   const giaPresenti = errore ? [] : numeriGiaPresenti(divise, blocco);
@@ -68,8 +69,12 @@ export function BloccoDivise({ divise, onChiudi }: { divise: Divisa[]; onChiudi:
           <input type="checkbox" checked={libero} onChange={(e) => setLibero(e.target.checked)} />
           Maglie da libero
         </label>
+        <label className="chk" style={{ marginTop: 8 }}>
+          <input type="checkbox" checked={pantaloncino} onChange={(e) => setPantaloncino(e.target.checked)} />
+          Con pantaloncino
+        </label>
         <div className={errore ? 'divisa-avviso' : 'divisa-anteprima'}>
-          {errore || `Creo ${quante} ${quante === 1 ? 'divisa' : 'divise'}: n. ${blocco.da}${quante > 1 ? `–${blocco.a}` : ''}, taglia ${taglia}, ${etichettaGruppo(blocco.gruppo)}${libero ? ', da libero' : ''}.`}
+          {errore || `Creo ${quante} ${quante === 1 ? 'divisa' : 'divise'}: n. ${blocco.da}${quante > 1 ? `–${blocco.a}` : ''}, taglia ${taglia}, ${etichettaGruppo(blocco.gruppo)}${libero ? ', da libero' : ''}, ${pantaloncino ? 'con' : 'senza'} pantaloncino.`}
         </div>
         {giaPresenti.length > 0 && (
           <div className="divisa-avviso">

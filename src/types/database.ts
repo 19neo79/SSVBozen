@@ -201,6 +201,8 @@ export interface Divisa {
   numero: number;
   taglia: TagliaDivisa;
   libero: boolean;
+  /** Non tutte le divise hanno il pantaloncino. */
+  pantaloncino: boolean;
   roster_id: string | null;
   giocatore_nome: string | null;
   note: string | null;
