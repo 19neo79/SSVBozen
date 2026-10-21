@@ -24,12 +24,19 @@ export function useSalvaDivisa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data, liberaPrima }: { id: string | null; data: Partial<Divisa>; liberaPrima?: string }) => {
-      // "Sposta qui": prima si libera la vecchia divisa del ragazzo, altrimenti il vincolo blocca il salvataggio.
+      // "Sposta qui": il database libera la vecchia divisa e salva la nuova in un solo passaggio (o nessuno dei due).
       if (liberaPrima) {
-        const { error } = await supabase.from('divise').update({ roster_id: null, giocatore_nome: null }).eq('id', liberaPrima);
+        const { error } = await supabase.rpc('salva_divisa_spostando', { vecchia: liberaPrima, dati: data, divisa_id: id });
         if (error) throw errore(error);
+        return;
       }
-      const { error } = id ? await supabase.from('divise').update(data).eq('id', id) : await supabase.from('divise').insert(data);
+      if (id) {
+        const { data: righe, error } = await supabase.from('divise').update(data).eq('id', id).select('id');
+        if (error) throw errore(error);
+        if (!righe?.length) throw new Error('Questa divisa non esiste più: forse è stata eliminata');
+        return;
+      }
+      const { error } = await supabase.from('divise').insert(data);
       if (error) throw errore(error);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: KEY }),

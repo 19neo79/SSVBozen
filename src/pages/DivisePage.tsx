@@ -241,7 +241,7 @@ export default function DivisePage() {
                   role="button"
                   tabIndex={0}
                   onClick={() => setAperto({ tipo: 'divisa', divisa: x })}
-                  onKeyDown={(e) => { if (e.key === 'Enter') setAperto({ tipo: 'divisa', divisa: x }); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) setAperto({ tipo: 'divisa', divisa: x }); }}
                 >
                   <input
                     type="checkbox"
