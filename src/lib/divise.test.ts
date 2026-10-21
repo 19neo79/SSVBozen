@@ -10,6 +10,7 @@ import {
   ordinaDivise,
   riepilogo,
   rosaSenzaDivisa,
+  numeriGiaPresenti,
   selezioneVisibile,
 } from './divise';
 
@@ -168,5 +169,15 @@ describe('selezioneVisibile', () => {
   it('le azioni multiple valgono solo per le divise selezionate ancora visibili', () => {
     const a = d({}), b = d({}), c = d({});
     expect(selezioneVisibile(new Set([a.id, b.id, 'cancellata']), [b, c])).toEqual([b.id]);
+  });
+});
+
+describe('numeriGiaPresenti', () => {
+  it('trova i numeri del blocco già usati nello stesso gruppo e tipo', () => {
+    const lista = [d({ gruppo: 'U17', numero: 3 }), d({ gruppo: 'U17', numero: 5, libero: true }), d({ gruppo: 'U14-15', numero: 4 }), d({ gruppo: 'U17', numero: 20 })];
+    expect(numeriGiaPresenti(lista, { gruppo: 'U17', da: 1, a: 14, taglia: 'M', libero: false })).toEqual([3]);
+  });
+  it('senza gruppo non segnala nulla, come per i numeri doppi', () => {
+    expect(numeriGiaPresenti([d({ numero: 3 })], { gruppo: null, da: 1, a: 14, taglia: 'M', libero: false })).toEqual([]);
   });
 });

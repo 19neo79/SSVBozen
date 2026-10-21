@@ -2406,3 +2406,6 @@ table.matrix tbody tr:nth-child(even) th {
   font-weight: 700;
   color: #1a7a34;
 }
+.divise-errore {
+  color: var(--rosso-scuro);
+}

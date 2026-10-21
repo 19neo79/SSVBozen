@@ -48,7 +48,7 @@ function Cella({ c }: { c: CellaRiepilogo }) {
 
 export default function DivisePage() {
   const { showToast, confirm } = useUi();
-  const { data: divise = [], isLoading } = useDivise();
+  const { data: divise = [], isLoading, isError, refetch } = useDivise();
   const { data: rosa = [] } = useRoster();
   const aggiorna = useAggiornaDivise();
   const elimina = useEliminaDivise();
@@ -138,6 +138,7 @@ export default function DivisePage() {
         </div>
       </div>
 
+      {!isError && (
       <div className="card divise-riepilogo">
         <div className="divise-tabella-wrap">
           <table className="divise-tabella">
@@ -173,6 +174,7 @@ export default function DivisePage() {
           <div className="divise-senza">{senzaDivisa.map((p) => `${p.nome} ${p.cognome}`).join(' · ')}</div>
         )}
       </div>
+      )}
 
       <div className="divise-filtri">
         <select aria-label="Gruppo" value={filtri.gruppo} onChange={(e) => setFiltri({ ...filtri, gruppo: e.target.value as FiltroGruppo })}>
@@ -213,6 +215,11 @@ export default function DivisePage() {
 
       {isLoading ? (
         <div className="empty">Carico le divise…</div>
+      ) : isError ? (
+        <div className="empty divise-errore">
+          Non riesco a caricare le divise: controlla la connessione. Le divise già inserite non sono andate perse.
+          <div style={{ marginTop: 10 }}><button type="button" className="btn small" onClick={() => refetch()}>Riprova</button></div>
+        </div>
       ) : !divise.length ? (
         <div className="empty">Nessuna divisa. Inizia con + A blocchi.</div>
       ) : (
@@ -265,7 +272,7 @@ export default function DivisePage() {
       )}
 
       {aperto?.tipo === 'divisa' && <FormDivisa divisa={aperto.divisa} divise={divise} rosa={rosa} onChiudi={() => setAperto(null)} />}
-      {aperto?.tipo === 'blocco' && <BloccoDivise onChiudi={() => setAperto(null)} />}
+      {aperto?.tipo === 'blocco' && <BloccoDivise divise={divise} onChiudi={() => setAperto(null)} />}
       {aperto?.tipo === 'esporta' && <EsportaDivise divise={divise} rosa={rosa} onChiudi={() => setAperto(null)} />}
     </section>
   );

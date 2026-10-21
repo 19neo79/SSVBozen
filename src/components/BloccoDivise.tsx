@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useCreaDivise } from '../hooks/useDivise';
-import { GRUPPI_DIVISA, TAGLIE, creaBlocco, erroreBlocco, etichettaGruppo, type Blocco } from '../lib/divise';
-import type { GruppoDivisa, TagliaDivisa } from '../types/database';
+import { GRUPPI_DIVISA, TAGLIE, creaBlocco, erroreBlocco, etichettaGruppo, numeriGiaPresenti, type Blocco } from '../lib/divise';
+import type { Divisa, GruppoDivisa, TagliaDivisa } from '../types/database';
 import { useBloccaScroll } from './FormDivisa';
 
 /** Crea più divise in un colpo: stessi gruppo, taglia e tipo, numeri in sequenza. */
-export function BloccoDivise({ onChiudi }: { onChiudi: () => void }) {
+export function BloccoDivise({ divise, onChiudi }: { divise: Divisa[]; onChiudi: () => void }) {
   useBloccaScroll();
   const { showToast } = useUi();
   const crea = useCreaDivise();
@@ -19,6 +19,7 @@ export function BloccoDivise({ onChiudi }: { onChiudi: () => void }) {
   const blocco: Blocco = { gruppo: gruppo || null, da: da === '' ? NaN : Number(da), a: a === '' ? NaN : Number(a), taglia, libero };
   const errore = erroreBlocco(blocco);
   const quante = errore ? 0 : blocco.a - blocco.da + 1;
+  const giaPresenti = errore ? [] : numeriGiaPresenti(divise, blocco);
 
   async function creaDivise() {
     if (errore) return;
@@ -70,6 +71,13 @@ export function BloccoDivise({ onChiudi }: { onChiudi: () => void }) {
         <div className={errore ? 'divisa-avviso' : 'divisa-anteprima'}>
           {errore || `Creo ${quante} ${quante === 1 ? 'divisa' : 'divise'}: n. ${blocco.da}${quante > 1 ? `–${blocco.a}` : ''}, taglia ${taglia}, ${etichettaGruppo(blocco.gruppo)}${libero ? ', da libero' : ''}.`}
         </div>
+        {giaPresenti.length > 0 && (
+          <div className="divisa-avviso">
+            ⚠ {giaPresenti.length === 1 ? `Il n. ${giaPresenti[0]} è già presente` : `${giaPresenti.length} numeri sono già presenti`} in {blocco.gruppo}
+            {libero ? ' tra le maglie da libero' : ''}
+            {giaPresenti.length > 1 && giaPresenti.length <= 10 ? ` (${giaPresenti.join(', ')})` : ''}. Puoi crearle lo stesso.
+          </div>
+        )}
         <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>Poi puoi correggere una per una la taglia o assegnarle ai ragazzi.</div>
         <div className="settings-actions">
           <button type="button" className="btn ghost" onClick={onChiudi}>Annulla</button>

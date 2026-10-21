@@ -127,3 +127,10 @@ export function rosaSenzaDivisa(rosa: RosterPlayer[], d: Divisa[]): RosterPlayer
 export function selezioneVisibile(selezione: Set<string>, visibili: Divisa[]): string[] {
   return visibili.filter((x) => selezione.has(x.id)).map((x) => x.id);
 }
+
+/** Numeri del blocco già usati nello stesso gruppo e tipo: avviso, non blocco (senza gruppo non conta). */
+export function numeriGiaPresenti(d: Divisa[], b: Blocco): number[] {
+  if (!b.gruppo) return [];
+  const usati = new Set(d.filter((x) => x.gruppo === b.gruppo && x.libero === b.libero).map((x) => x.numero));
+  return creaBlocco(b).map((x) => x.numero).filter((n) => usati.has(n));
+}

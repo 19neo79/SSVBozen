@@ -45,16 +45,26 @@ export async function scaricaExcelDivise(d: Divisa[], rosa: RosterPlayer[], grup
   const foglioDivise = XLSX.utils.aoa_to_sheet([intestazione, ...elenco]);
   foglioDivise['!cols'] = intestazione.map((t, i) => ({ wch: Math.max(t.length + 2, ...elenco.map((r) => String(r[i]).length + 2), 8) }));
 
-  const r = riepilogo(scelte);
-  const titoloCol = (c: (typeof COLONNE_RIEPILOGO)[number]) => (c === 'nessuno' ? 'Da assegnare' : c === 'totale' ? 'Totale' : c);
-  const testa = ['Taglia', ...COLONNE_RIEPILOGO.flatMap((c) => [titoloCol(c), 'di cui libero'])];
-  const riga = (nome: string, celle: (typeof r.totali)) => [nome, ...COLONNE_RIEPILOGO.flatMap((c) => [celle[c].totale, celle[c].libero])];
-  const foglioRiepilogo = XLSX.utils.aoa_to_sheet([testa, ...r.righe.map((x) => riga(x.taglia, x.celle)), riga('Totale', r.totali)]);
-  foglioRiepilogo['!cols'] = testa.map((t) => ({ wch: Math.max(t.length + 2, 8) }));
+  const righeRiepilogo = righeRiepilogoExcel(d, gruppi);
+  const foglioRiepilogo = XLSX.utils.aoa_to_sheet(righeRiepilogo);
+  foglioRiepilogo['!cols'] = righeRiepilogo[0].map((t) => ({ wch: Math.max(String(t).length + 2, 8) }));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, foglioDivise, 'Divise');
   XLSX.utils.book_append_sheet(wb, foglioRiepilogo, 'Riepilogo');
-  const nomeGruppi = gruppi.size === ORDINE.length ? 'Tutte' : ORDINE.filter((g) => gruppi.has(g)).map((g) => etichettaGruppo(g).replace(/\s+/g, '')).join('_');
-  XLSX.writeFile(wb, `Divise_${nomeGruppi}_${todayISO()}.xlsx`);
+  XLSX.writeFile(wb, nomeFileDivise(gruppi));
+}
+
+/** Foglio Riepilogo: taglie × gruppi scelti (più il totale), con le maglie da libero accanto. */
+export function righeRiepilogoExcel(d: Divisa[], gruppi: Set<GruppoDivisa | null>): (string | number)[][] {
+  const r = riepilogo(filtraPerGruppi(d, gruppi));
+  const colonne = COLONNE_RIEPILOGO.filter((c) => c === 'totale' || gruppi.has(c === 'nessuno' ? null : c));
+  const titolo = (c: (typeof COLONNE_RIEPILOGO)[number]) => (c === 'nessuno' ? 'Da assegnare' : c === 'totale' ? 'Totale' : c);
+  const riga = (nome: string, celle: typeof r.totali) => [nome, ...colonne.flatMap((c) => [celle[c].totale, celle[c].libero])];
+  return [['Taglia', ...colonne.flatMap((c) => [titolo(c), 'di cui libero'])], ...r.righe.map((x) => riga(x.taglia, x.celle)), riga('Totale', r.totali)];
+}
+
+export function nomeFileDivise(gruppi: Set<GruppoDivisa | null>): string {
+  const nome = gruppi.size === ORDINE.length ? 'Tutte' : ORDINE.filter((g) => gruppi.has(g)).map((g) => etichettaGruppo(g).replace(/\s+/g, '_')).join('_');
+  return `Divise_${nome}_${todayISO()}.xlsx`;
 }
