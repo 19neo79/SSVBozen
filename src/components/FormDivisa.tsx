@@ -49,12 +49,15 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
   const etichetteRosa = useMemo(() => {
     const m = new Map<string, string>();
     for (const x of divise) {
-      if (!x.roster_id || x.id === divisa?.id) continue;
+      if (x.id === divisa?.id) continue;
+      // Anche le divise con il nome scritto a mano, se corrisponde a un ragazzo della rosa.
+      const id = x.roster_id ?? (x.giocatore_nome ? rosa.find((p) => normalizzaNome(nomeRosa(p)) === normalizzaNome(x.giocatore_nome!))?.id : undefined);
+      if (!id) continue;
       const testo = x.libero ? `libero n. ${x.numero}` : `n. ${x.numero}`;
-      m.set(x.roster_id, m.has(x.roster_id) ? `${m.get(x.roster_id)} · ${testo}` : `ha già: ${testo}`);
+      m.set(id, m.has(id) ? `${m.get(id)} · ${testo}` : `ha già: ${testo}`);
     }
     return m;
-  }, [divise, divisa?.id]);
+  }, [divise, divisa?.id, rosa]);
 
   async function salvaDivisa() {
     if (!numeroValido) { showToast('Il numero va da 0 a 99'); return; }

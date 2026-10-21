@@ -72,16 +72,20 @@ export interface Assegnazione {
   libero: boolean;
 }
 
-/** L'altra divisa dello stesso tipo che quel ragazzo ha già, se c'è (una normale e una da libero al massimo). */
+/**
+ * L'altra divisa dello stesso tipo che quel ragazzo ha già, se c'è (una normale e una da libero al massimo).
+ * Stesso ragazzo = stesso id della rosa, oppure stesso nome quando almeno una delle due divise è scritta a mano
+ * (es. assegnata prima che entrasse in rosa, o dopo che ne è uscito). Due ragazzi della rosa omonimi restano distinti.
+ */
 export function divisaInConflitto(d: Divisa[], a: Assegnazione): Divisa | undefined {
   const nome = a.giocatore_nome ? normalizzaNome(a.giocatore_nome) : '';
   if (!a.roster_id && !nome) return undefined;
-  return d.find(
-    (x) =>
-      x.id !== a.id &&
-      x.libero === a.libero &&
-      (a.roster_id ? x.roster_id === a.roster_id : !x.roster_id && !!x.giocatore_nome && normalizzaNome(x.giocatore_nome) === nome),
-  );
+  return d.find((x) => {
+    if (x.id === a.id || x.libero !== a.libero) return false;
+    if (a.roster_id && x.roster_id === a.roster_id) return true;
+    const stessoNome = !!nome && !!x.giocatore_nome && normalizzaNome(x.giocatore_nome) === nome;
+    return stessoNome && (!x.roster_id || !a.roster_id);
+  });
 }
 
 export interface Blocco {
@@ -112,8 +116,14 @@ export function nomeGiocatore(d: Divisa, rosa: RosterPlayer[]): { nome: string |
   return { nome: d.giocatore_nome, fuoriRosa: false };
 }
 
-/** Ragazzi della rosa senza nessuna divisa, per cognome. */
+/** Ragazzi della rosa senza nessuna divisa, per cognome (conta anche una divisa con il loro nome scritto a mano). */
 export function rosaSenzaDivisa(rosa: RosterPlayer[], d: Divisa[]): RosterPlayer[] {
   const conDivisa = new Set(d.map((x) => x.roster_id).filter(Boolean));
-  return rosa.filter((p) => !conDivisa.has(p.id)).sort((a, b) => a.cognome.localeCompare(b.cognome, 'it') || a.nome.localeCompare(b.nome, 'it'));
+  const nomiAMano = new Set(d.filter((x) => !x.roster_id && x.giocatore_nome).map((x) => normalizzaNome(x.giocatore_nome!)));
+  return rosa.filter((p) => !conDivisa.has(p.id) && !nomiAMano.has(normalizzaNome(`${p.nome} ${p.cognome}`))).sort((a, b) => a.cognome.localeCompare(b.cognome, 'it') || a.nome.localeCompare(b.nome, 'it'));
+}
+
+/** Le azioni su più divise valgono solo per quelle selezionate che si vedono con i filtri attuali. */
+export function selezioneVisibile(selezione: Set<string>, visibili: Divisa[]): string[] {
+  return visibili.filter((x) => selezione.has(x.id)).map((x) => x.id);
 }

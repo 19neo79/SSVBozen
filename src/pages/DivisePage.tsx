@@ -16,6 +16,7 @@ import {
   ordinaDivise,
   riepilogo,
   rosaSenzaDivisa,
+  selezioneVisibile,
   type CellaRiepilogo,
   type ColonnaRiepilogo,
 } from '../lib/divise';
@@ -77,8 +78,8 @@ export default function DivisePage() {
     );
   }, [divise, rosa, filtri]);
 
-  // Solo le divise selezionate che esistono ancora (dopo un'eliminazione spariscono da sole).
-  const selezionate = divise.filter((x) => selezione.has(x.id)).map((x) => x.id);
+  // Solo le selezionate ancora visibili: cambiando filtro non si agisce su divise che non si vedono più.
+  const selezionate = selezioneVisibile(selezione, visibili);
   const tutteVisibiliSelezionate = visibili.length > 0 && visibili.every((x) => selezione.has(x.id));
 
   function cambiaSelezione(id: string) {

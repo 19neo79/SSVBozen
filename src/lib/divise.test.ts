@@ -10,6 +10,7 @@ import {
   ordinaDivise,
   riepilogo,
   rosaSenzaDivisa,
+  selezioneVisibile,
 } from './divise';
 
 let progressivo = 0;
@@ -85,6 +86,18 @@ describe('divisaInConflitto', () => {
     const esistente = d({ roster_id: 'r1', giocatore_nome: 'Mario Rossi' });
     expect(divisaInConflitto([esistente], { id: null, roster_id: 'r1', giocatore_nome: 'Mario Rossi', libero: false })).toBe(esistente);
   });
+  it('nome scritto a mano e poi lo stesso ragazzo scelto dalla rosa sono la stessa persona', () => {
+    const aMano = d({ giocatore_nome: 'Mario Rossi' });
+    expect(divisaInConflitto([aMano], { id: null, roster_id: 'r1', giocatore_nome: 'Mario Rossi', libero: false })).toBe(aMano);
+  });
+  it('ragazzo uscito dalla rosa e poi scritto a mano sono la stessa persona', () => {
+    const fuoriRosa = d({ roster_id: 'r9', giocatore_nome: 'Mario Rossi' });
+    expect(divisaInConflitto([fuoriRosa], { id: null, roster_id: null, giocatore_nome: 'mario rossi', libero: false })).toBe(fuoriRosa);
+  });
+  it('due ragazzi diversi della rosa con lo stesso nome non sono in conflitto', () => {
+    const altro = d({ roster_id: 'r2', giocatore_nome: 'Mario Rossi' });
+    expect(divisaInConflitto([altro], { id: null, roster_id: 'r1', giocatore_nome: 'Mario Rossi', libero: false })).toBeUndefined();
+  });
   it('senza giocatore non c\'è conflitto', () => {
     expect(divisaInConflitto([d({})], { id: null, roster_id: null, giocatore_nome: null, libero: false })).toBeUndefined();
   });
@@ -140,9 +153,20 @@ describe('nomeGiocatore', () => {
 });
 
 describe('rosaSenzaDivisa', () => {
+  it('chi ha una divisa con il nome scritto a mano non è senza divisa', () => {
+    const rosa = [ragazzo('r1', 'Lorenzo', 'Riccadonna'), ragazzo('r3', 'Aldo', 'Bianchi')];
+    expect(rosaSenzaDivisa(rosa, [d({ giocatore_nome: 'lorenzo  riccadonna' })]).map((r) => r.id)).toEqual(['r3']);
+  });
   it('chi ha solo la divisa da libero ha comunque una divisa', () => {
     const rosa = [ragazzo('r2', 'Zeno', 'Verdi'), ragazzo('r1', 'Lorenzo', 'Riccadonna'), ragazzo('r3', 'Aldo', 'Bianchi')];
     const divise = [d({ roster_id: 'r1', libero: true, giocatore_nome: 'Lorenzo Riccadonna' })];
     expect(rosaSenzaDivisa(rosa, divise).map((r) => r.id)).toEqual(['r3', 'r2']);
+  });
+});
+
+describe('selezioneVisibile', () => {
+  it('le azioni multiple valgono solo per le divise selezionate ancora visibili', () => {
+    const a = d({}), b = d({}), c = d({});
+    expect(selezioneVisibile(new Set([a.id, b.id, 'cancellata']), [b, c])).toEqual([b.id]);
   });
 });
