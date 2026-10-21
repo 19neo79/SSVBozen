@@ -2,6 +2,7 @@ import { dayLabelShort, fmtDateShort } from '../lib/dates';
 import { resolveLocation, type Locatable } from '../lib/location';
 import { esito, fmtParziali, hasRisultato } from '../lib/risultato';
 import type { SetParziale } from '../types/database';
+import { perCognomeNome } from '../lib/ordine';
 
 export interface FoglioTraining {
   data: string;
@@ -63,7 +64,7 @@ export function FoglioSettimanale({ days, trainings, matches, roster, settings, 
   const weekMatches = matches
     .filter((m) => days.includes(m.data))
     .sort((a, b) => (a.data === b.data ? a.orario.localeCompare(b.orario) : a.data.localeCompare(b.data)));
-  const players = [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
+  const players = [...roster].sort(perCognomeNome);
 
   type Ev = { type: 'training'; item: FoglioTraining } | { type: 'match'; item: FoglioMatch };
   const events: Ev[] = [

@@ -17,6 +17,7 @@ import { WeekPicker } from '../components/ui/WeekPicker';
 import { fmtDate, fmtDateShort, fmtISODate, parseDateLocal, todayISO, weekRangeFor } from '../lib/dates';
 import { resolveLocation } from '../lib/location';
 import type { Giorno, Training } from '../types/database';
+import { perCognomeNome } from '../lib/ordine';
 
 const GIORNI: { key: Giorno; label: string; dayIndex: number }[] = [
   { key: 'lun', label: 'Lunedì', dayIndex: 0 },
@@ -348,7 +349,7 @@ export default function TrainingsPage() {
     const convocatiPlayers = convocati
       .map((id) => roster.find((p) => p.id === id))
       .filter((p): p is NonNullable<typeof p> => !!p)
-      .sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
+      .sort(perCognomeNome);
     const loc = resolveLocation(t.venue_id, t.palestra_custom, venues);
     const isEditingConvocati = editingConvocatiId === t.id;
     const isEditingDetails = editingDetailsId === t.id;

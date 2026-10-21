@@ -32,6 +32,7 @@ import {
   type TeamOverview,
 } from '../lib/stats';
 import type { RosterPlayer } from '../types/database';
+import { perCognomeNome } from '../lib/ordine';
 
 function prevMonthKey(key: string): string {
   const [y, m] = key.split('-').map(Number);
@@ -63,7 +64,7 @@ export default function StatsPage() {
   const pastMatches = useMemo(() => soloInRosa(pastOnly(matches, today), rosterIds), [matches, today, rosterIds]);
 
   const players = useMemo(
-    () => [...roster].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome)),
+    () => [...roster].sort(perCognomeNome),
     [roster],
   );
 

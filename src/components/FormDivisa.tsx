@@ -3,6 +3,7 @@ import { useUi } from '../contexts/UiContext';
 import { useEliminaDivise, useSalvaDivisa } from '../hooks/useDivise';
 import { GRUPPI_DIVISA, TAGLIE, avvisoTaglia, divisaInConflitto, etichettaGruppo, nomeGiocatore, normalizzaNome } from '../lib/divise';
 import type { Divisa, GruppoDivisa, RosterPlayer, TagliaDivisa } from '../types/database';
+import { perCognomeNome } from '../lib/ordine';
 
 /** Blocca lo scroll della pagina sotto un popup, come nella Rosa. */
 export function useBloccaScroll() {
@@ -132,7 +133,7 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
             onChange={(e) => setGiocatore(e.target.value)}
           />
           <datalist id="divisa-rosa">
-            {[...rosa].sort((a, b) => a.cognome.localeCompare(b.cognome, 'it')).map((p) => (
+            {[...rosa].sort(perCognomeNome).map((p) => (
               <option key={p.id} value={nomeRosa(p)} label={[p.taglia_divisa ? `taglia ${p.taglia_divisa}` : '', etichetteRosa.get(p.id) || ''].filter(Boolean).join(' · ') || undefined} />
             ))}
           </datalist>

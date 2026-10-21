@@ -1,5 +1,6 @@
 import type { RosterPlayer } from '../../types/database';
 import { CategoriaTag } from './CategoriaTag';
+import { perCognomeNome } from '../../lib/ordine';
 
 interface PlayerChecksProps {
   players: RosterPlayer[];
@@ -9,7 +10,7 @@ interface PlayerChecksProps {
 }
 
 export function PlayerChecks({ players, selected, onChange, emptyMessage }: PlayerChecksProps) {
-  const sorted = [...players].sort((a, b) => (a.numero ?? 99) - (b.numero ?? 99) || a.cognome.localeCompare(b.cognome));
+  const sorted = [...players].sort(perCognomeNome);
 
   if (sorted.length === 0) {
     return <span className="muted">{emptyMessage || 'Nessun giocatore in rosa — aggiungili prima nella Rosa.'}</span>;

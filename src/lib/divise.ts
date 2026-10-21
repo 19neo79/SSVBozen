@@ -1,4 +1,5 @@
 import type { Divisa, GruppoDivisa, RosterPlayer, TagliaDivisa } from '../types/database';
+import { perCognomeNome } from './ordine';
 
 export const GRUPPI_DIVISA: GruppoDivisa[] = ['U17', 'U14-15', 'U12-13'];
 // Le divise della società vanno dalla S alla XL.
@@ -128,7 +129,7 @@ export function nomeGiocatore(d: Divisa, rosa: RosterPlayer[]): { nome: string |
 export function rosaSenzaDivisa(rosa: RosterPlayer[], d: Divisa[]): RosterPlayer[] {
   const conDivisa = new Set(d.map((x) => x.roster_id).filter(Boolean));
   const nomiAMano = new Set(d.filter((x) => !x.roster_id && x.giocatore_nome).map((x) => normalizzaNome(x.giocatore_nome!)));
-  return rosa.filter((p) => !conDivisa.has(p.id) && !nomiAMano.has(normalizzaNome(`${p.nome} ${p.cognome}`))).sort((a, b) => a.cognome.localeCompare(b.cognome, 'it') || a.nome.localeCompare(b.nome, 'it'));
+  return rosa.filter((p) => !conDivisa.has(p.id) && !nomiAMano.has(normalizzaNome(`${p.nome} ${p.cognome}`))).sort(perCognomeNome);
 }
 
 /** Le azioni su più divise valgono solo per quelle selezionate che si vedono con i filtri attuali. */
