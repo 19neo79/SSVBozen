@@ -190,3 +190,20 @@ export interface ReportCommento {
   consigli: string;
   updated_at: string;
 }
+
+export type GruppoDivisa = 'U17' | 'U14-15' | 'U12-13';
+export type TagliaDivisa = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | '3XL';
+
+/** Maglia con numero + pantaloncino della stessa taglia. gruppo null = da assegnare. */
+export interface Divisa {
+  id: string;
+  gruppo: GruppoDivisa | null;
+  numero: number;
+  taglia: TagliaDivisa;
+  libero: boolean;
+  roster_id: string | null;
+  giocatore_nome: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
