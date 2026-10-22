@@ -59,6 +59,8 @@ export interface RosterPlayer {
   foto_path: string | null;
   foto_intera_path: string | null;
   foto_busto_path: string | null;
+  /** Miniatura leggera per l'elenco. */
+  foto_mini_path: string | null;
   created_at: string;
 }
 

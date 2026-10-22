@@ -28,6 +28,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Pezzi pesanti usati solo da chi gestisce la squadra (Excel, riconoscimento del viso, elenco comuni):
+        // non li scarichiamo in anticipo su ogni telefono, arrivano quando servono.
+        globIgnores: ['**/xlsx-*.js', '**/vision_bundle-*.js', '**/lista-comuni-*.js'],
         // Non mettiamo mai in cache le chiamate a Supabase: i dati (allenamenti,
         // presenze, ecc.) devono sempre arrivare aggiornati dalla rete.
         runtimeCaching: [

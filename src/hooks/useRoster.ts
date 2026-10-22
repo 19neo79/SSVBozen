@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { DURATA_URL_SEC, aggiornaCache, dividiPercorsi, leggiCache, scriviCache } from '../lib/fotoCache';
 import type { RosterPlayer } from '../types/database';
 
 const KEY = ['roster'];
@@ -71,11 +72,16 @@ export function useFotoAtleti(paths: string[]) {
     enabled: ordinati.length > 0,
     staleTime: 50 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.storage.from('foto-atleti').createSignedUrls(ordinati, 3600);
+      // Riusa i link ricordati sul dispositivo: con lo stesso link il browser non riscarica la foto.
+      const ora = Date.now();
+      const cache = leggiCache();
+      const { pronti, daChiedere } = dividiPercorsi(cache, ordinati, ora);
+      if (!daChiedere.length) return pronti;
+      const { data, error } = await supabase.storage.from('foto-atleti').createSignedUrls(daChiedere, DURATA_URL_SEC);
       if (error) throw error;
-      const mappa: Record<string, string> = {};
-      (data || []).forEach((d) => { if (d.path && d.signedUrl) mappa[d.path] = d.signedUrl; });
-      return mappa;
+      const nuovi = (data || []).filter((d) => d.path && d.signedUrl).map((d) => ({ path: d.path!, url: d.signedUrl! }));
+      scriviCache(aggiornaCache(cache, nuovi, ora));
+      return { ...pronti, ...Object.fromEntries(nuovi.map((n) => [n.path, n.url])) };
     },
   });
 }

@@ -22,9 +22,8 @@ export function mapsUrlForText(text: string): string {
 }
 
 /**
- * Risolve un venueId (che punta a venues O a campi_avversari) o un testo libero
- * in un'etichetta leggibile + link Maps. `locatables` deve contenere sia le palestre
- * sia i campi degli avversari (id univoci tra i due insiemi).
+ * Risolve un venueId (palestra, nostra o degli avversari) o un testo libero
+ * in un'etichetta leggibile + link Maps.
  */
 export function resolveLocation(
   venueId: string | null | undefined,

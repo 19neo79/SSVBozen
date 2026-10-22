@@ -9,6 +9,8 @@ export interface Ritaglio {
 }
 
 const LATO_VOLTO = 512;
+// Nell'elenco la foto è grande 48 px: 128 px bastano anche per gli schermi ad alta densità.
+const LATO_MINI = 128;
 const LATO_MAX_INTERA = 1280;
 const MAX_BYTE = 900 * 1024;
 // Motore wasm dal CDN (stessa versione del pacchetto npm), modello del viso servito dall'app.
@@ -96,6 +98,7 @@ export interface FotoPreparate {
   volto: Blob;
   busto: Blob;
   intera: Blob;
+  mini: Blob;
 }
 
 /** Quadrato a mezzo busto: stesso centro orizzontale del viso, testa in alto, corpo fino al petto. */
@@ -104,15 +107,22 @@ export function ritaglioBusto(volto: Ritaglio, w: number, h: number): Ritaglio {
   return limitaRitaglio({ lato, x: volto.x + volto.lato / 2 - lato / 2, y: volto.y - volto.lato * 0.15 }, w, h);
 }
 
-function quadrato(img: ImageBitmap, r: Ritaglio): HTMLCanvasElement {
+function quadrato(img: CanvasImageSource, r: Ritaglio, lato = LATO_VOLTO): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  c.width = LATO_VOLTO;
-  c.height = LATO_VOLTO;
-  c.getContext('2d')!.drawImage(img, r.x, r.y, r.lato, r.lato, 0, 0, LATO_VOLTO, LATO_VOLTO);
+  c.width = lato;
+  c.height = lato;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, r.x, r.y, r.lato, r.lato, 0, 0, lato, lato);
   return c;
 }
 
-/** Tre versioni: viso (elenco e miniature), mezzo busto (scheda), foto intera ridotta (ingrandimento). */
+/** Miniatura per l'elenco, dal ritaglio sul viso (pesa circa 5 KB). */
+export function creaMiniatura(img: CanvasImageSource, r: Ritaglio): Promise<Blob> {
+  return toBlob(quadrato(img, r, LATO_MINI), 0.8);
+}
+
+/** Quattro versioni: miniatura (elenco), viso (modifica), mezzo busto (scheda), foto intera ridotta (ingrandimento). */
 export async function creaFoto(img: ImageBitmap, r: Ritaglio): Promise<FotoPreparate> {
   const cv = quadrato(img, r);
   const cb = quadrato(img, ritaglioBusto(r, img.width, img.height));
@@ -121,7 +131,7 @@ export async function creaFoto(img: ImageBitmap, r: Ritaglio): Promise<FotoPrepa
   ci.width = Math.round(img.width * scala);
   ci.height = Math.round(img.height * scala);
   ci.getContext('2d')!.drawImage(img, 0, 0, ci.width, ci.height);
-  return { volto: await jpegLeggero(cv), busto: await jpegLeggero(cb), intera: await jpegLeggero(ci) };
+  return { volto: await jpegLeggero(cv), busto: await jpegLeggero(cb), intera: await jpegLeggero(ci), mini: await creaMiniatura(img, r) };
 }
 
 /** Carica con nomi nuovi ogni volta, così i link vecchi non mostrano la foto precedente. */
@@ -129,6 +139,7 @@ export interface PercorsiFoto {
   volto: string;
   busto: string;
   intera: string;
+  mini: string;
 }
 
 export async function caricaFoto(atletaId: string, foto: FotoPreparate): Promise<PercorsiFoto> {
@@ -137,9 +148,11 @@ export async function caricaFoto(atletaId: string, foto: FotoPreparate): Promise
     volto: `${atletaId}/${t}-volto.jpg`,
     busto: `${atletaId}/${t}-busto.jpg`,
     intera: `${atletaId}/${t}-intera.jpg`,
+    mini: `${atletaId}/${t}-mini.jpg`,
   };
-  for (const k of ['volto', 'busto', 'intera'] as const) {
-    const { error } = await supabase.storage.from('foto-atleti').upload(percorsi[k], foto[k], { contentType: 'image/jpeg' });
+  for (const k of ['volto', 'busto', 'intera', 'mini'] as const) {
+    // Ogni caricamento ha un nome nuovo e il file non cambia più: il browser può tenerlo a lungo.
+    const { error } = await supabase.storage.from('foto-atleti').upload(percorsi[k], foto[k], { contentType: 'image/jpeg', cacheControl: '31536000' });
     if (error) throw error;
   }
   return percorsi;
@@ -153,7 +166,7 @@ export async function eliminaFoto(paths: (string | null | undefined)[]) {
 export async function impostaFotoAtleta(atletaId: string, p: PercorsiFoto | null) {
   const { error } = await supabase
     .from('roster')
-    .update({ foto_path: p?.volto ?? null, foto_busto_path: p?.busto ?? null, foto_intera_path: p?.intera ?? null })
+    .update({ foto_path: p?.volto ?? null, foto_busto_path: p?.busto ?? null, foto_intera_path: p?.intera ?? null, foto_mini_path: p?.mini ?? null })
     .eq('id', atletaId);
   if (error) throw error;
 }

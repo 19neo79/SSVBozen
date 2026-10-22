@@ -78,28 +78,3 @@ export function downloadCSV(filename: string, headers: string[], rows: unknown[]
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
-export interface ParsedCSV {
-  fieldMap: (string | null)[];
-  dataLines: string[];
-  delim: string;
-}
-
-/** Legge le righe del CSV e mappa le intestazioni secondo headerMap (chiave normalizzata -> campo). */
-export function parseCSVWithHeaderMap(text: string, headerMap: Record<string, string>): ParsedCSV | null {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return null;
-  const delim = detectDelimiter(lines[0]);
-  const headers = parseCSVLine(lines[0], delim).map(normalizeHeader);
-  const fieldMap = headers.map((h) => headerMap[h] || null);
-  return { fieldMap, dataLines: lines.slice(1), delim };
-}
-
-export function rowToRecord(row: string, delim: string, fieldMap: (string | null)[]): Record<string, string> {
-  const cols = parseCSVLine(row, delim);
-  const rec: Record<string, string> = {};
-  fieldMap.forEach((field, idx) => {
-    if (field) rec[field] = (cols[idx] || '').trim();
-  });
-  return rec;
-}

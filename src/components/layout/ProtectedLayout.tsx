@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../hooks/useSettings';
@@ -92,7 +92,9 @@ export function ProtectedLayout() {
       </nav>
 
       <main>
-        <Outlet />
+        <Suspense fallback={<div className="empty">Caricamento…</div>}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className="app-footer no-print">

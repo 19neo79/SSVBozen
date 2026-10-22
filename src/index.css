@@ -464,6 +464,8 @@ tr:last-child td {
   background: var(--panna);
 }
 .foto-atleta-vuota {
+  position: relative;
+  overflow: hidden;
   color: #fff;
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 800;
@@ -474,6 +476,18 @@ tr:last-child td {
 }
 .foto-atleta-vuota.u15 {
   background: var(--rosso);
+}
+.foto-atleta-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.foto-atleta-img.pronta {
+  opacity: 1;
 }
 .foto-atleta-placeholder {
   border: 2px dashed var(--linea);

@@ -109,7 +109,7 @@ export default function RosterPage() {
   const [fotoRimossa, setFotoRimossa] = useState(false);
   const [fotoInPreparazione, setFotoInPreparazione] = useState(false);
   const qc = useQueryClient();
-  const { data: fotoUrls = {} } = useFotoAtleti(roster.flatMap((p) => [p.foto_path, p.foto_busto_path, p.foto_intera_path]).filter((x): x is string => !!x));
+  const { data: fotoUrls = {} } = useFotoAtleti(roster.flatMap((p) => [p.foto_mini_path, p.foto_path, p.foto_busto_path, p.foto_intera_path]).filter((x): x is string => !!x));
 
   useEffect(() => {
     if (formOpen) caricaComuni().then(setComuni).catch(() => showToast('Impossibile caricare l\'elenco dei comuni'));
@@ -341,7 +341,7 @@ export default function RosterPage() {
     try {
       const id = await savePlayer.mutateAsync({ id: editingId, data });
       const prima = editingId ? roster.find((p) => p.id === editingId) : undefined;
-      const vecchie = [prima?.foto_path, prima?.foto_busto_path, prima?.foto_intera_path];
+      const vecchie = [prima?.foto_path, prima?.foto_busto_path, prima?.foto_intera_path, prima?.foto_mini_path];
       try {
         if (fotoNuova) {
           const paths = await caricaFoto(id, fotoNuova);
@@ -370,7 +370,7 @@ export default function RosterPage() {
     try {
       const atleta = roster.find((p) => p.id === id);
       await deletePlayer.mutateAsync(id);
-      await eliminaFoto([atleta?.foto_path, atleta?.foto_busto_path, atleta?.foto_intera_path]);
+      await eliminaFoto([atleta?.foto_path, atleta?.foto_busto_path, atleta?.foto_intera_path, atleta?.foto_mini_path]);
       if (viewingId === id) setViewingId(null);
       showToast('Giocatore eliminato');
     } catch {
@@ -762,7 +762,7 @@ export default function RosterPage() {
             const cert = certStatus(p, today, soon);
             return (
               <button className="roster-row" key={p.id} onClick={() => openDetail(p.id)}>
-                <FotoAtleta player={p} url={p.foto_path ? fotoUrls[p.foto_path] : undefined} size={48} />
+                <FotoAtleta player={p} url={(p.foto_mini_path && fotoUrls[p.foto_mini_path]) || (p.foto_path ? fotoUrls[p.foto_path] : undefined)} size={48} />
                 <div className="roster-row-main">
                   <div className="roster-row-top">
                     <span className="roster-row-name">{p.cognome} {p.nome}</span>
