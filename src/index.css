@@ -2441,7 +2441,3 @@ table.matrix tbody tr:nth-child(even) th {
   font-weight: 600;
   color: var(--blu);
 }
-.roster-divisa.nessuna {
-  color: var(--inchiostro-soft);
-  font-weight: 400;
-}

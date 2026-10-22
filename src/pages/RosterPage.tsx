@@ -779,10 +779,9 @@ export default function RosterPage() {
                     {contattoPrincipale(p) && <span>{contattoPrincipale(p)}</span>}
                     <span className={`roster-cert ${cert.stato}`}>{cert.breve}</span>
                     {isAdmin && (() => {
-                      const sue = diviseDelGiocatore(p, divise);
-                      if (!sue.normale && !sue.libero) return <span className="roster-divisa nessuna">senza divisa</span>;
-                      // Il numero della divisa normale è già nel quadrato blu: qui solo taglia ed eventuale maglia da libero.
-                      return <span className="roster-divisa">{[sue.normale && `taglia ${sue.normale.taglia}`, sue.libero && `libero n. ${sue.libero.numero} ${sue.libero.taglia}`].filter(Boolean).join(' + ')}</span>;
+                      // Il numero della divisa normale è già nel quadrato blu: qui solo l'eventuale seconda maglia da libero.
+                      const libero = diviseDelGiocatore(p, divise).libero;
+                      return libero ? <span className="roster-divisa">libero n. {libero.numero} {libero.taglia}</span> : null;
                     })()}
                   </div>
                 </div>
