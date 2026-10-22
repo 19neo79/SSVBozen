@@ -771,7 +771,6 @@ export default function RosterPage() {
                   <div className="roster-row-meta">
                     {[
                       p.data_nascita ? `${eta(p.data_nascita)} anni · ${fmtDateShort(p.data_nascita)}` : null,
-                      p.numero != null ? `maglia ${p.numero}` : null,
                       p.ruolo,
                       p.indirizzo_comune,
                     ].filter(Boolean).join(' · ') || '—'}
@@ -786,6 +785,12 @@ export default function RosterPage() {
                     })()}
                   </div>
                 </div>
+                <span
+                  className={`roster-numero${p.numero == null ? ' vuoto' : ''}`}
+                  title={p.numero == null ? 'Numero di maglia non assegnato' : `Maglia n. ${p.numero}`}
+                >
+                  {p.numero ?? '–'}
+                </span>
                 <span className="roster-row-chevron">›</span>
               </button>
             );
