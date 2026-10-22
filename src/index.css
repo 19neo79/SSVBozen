@@ -2454,3 +2454,30 @@ table.matrix tbody tr:nth-child(even) th {
 .divisa-senza-pant {
   color: #b06a00;
 }
+.divisa-consegna {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.divisa-consegna .chk {
+  border: none;
+  padding: 0;
+  font-weight: 700;
+}
+.divisa-consegna.fatta {
+  background: #e8f5ec;
+  border-color: #b7dcc2;
+  color: #1a5e2b;
+}
+.divisa-consegnata {
+  color: #1a7a34;
+}
+.divisa-da-consegnare {
+  color: var(--inchiostro-soft);
+}

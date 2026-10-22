@@ -1,6 +1,6 @@
 import type { Divisa, GruppoDivisa, RosterPlayer } from '../types/database';
 import { isoToItalian, todayISO } from './dates';
-import { COLONNE_RIEPILOGO, GRUPPI_DIVISA, etichettaGruppo, nomeGiocatore, ordinaDivise, riepilogo } from './divise';
+import { COLONNE_RIEPILOGO, GRUPPI_DIVISA, dataConsegna, dataOraConsegna, etichettaGruppo, nomeGiocatore, ordinaDivise, riepilogo } from './divise';
 
 /** Gruppi nell'ordine di stampa: U17, U14-15, U12-13, poi da assegnare. */
 const ORDINE: (GruppoDivisa | null)[] = [...GRUPPI_DIVISA, null];
@@ -29,6 +29,7 @@ export function testoWhatsAppDivise(d: Divisa[], rosa: RosterPlayer[], gruppi: S
       const parti = [String(x.numero), x.taglia];
       if (x.libero) parti.push('LIBERO');
       parti.push(giocatoreTesto(x, rosa) || 'libera');
+      if (x.giocatore_nome && x.consegnata_il) parti.push(`consegnata ${dataConsegna(x.consegnata_il).slice(0, 5)}`);
       if (!x.pantaloncino) parti.push('senza pantaloncino');
       righe.push(parti.join(' · ') + (x.note?.trim() ? ` — ${x.note.trim()}` : ''));
     }
@@ -40,10 +41,10 @@ export async function scaricaExcelDivise(d: Divisa[], rosa: RosterPlayer[], grup
   const XLSX = await import('xlsx');
   const scelte = ordinaDivise(filtraPerGruppi(d, gruppi));
 
-  const intestazione = ['Gruppo', 'Numero', 'Taglia', 'Libero', 'Pantaloncino', 'Giocatore', 'In rosa', 'Note'];
+  const intestazione = ['Gruppo', 'Numero', 'Taglia', 'Libero', 'Pantaloncino', 'Giocatore', 'In rosa', 'Consegnata il', 'Note'];
   const elenco = scelte.map((x) => {
     const { nome, fuoriRosa } = nomeGiocatore(x, rosa);
-    return [etichettaGruppo(x.gruppo), x.numero, x.taglia, x.libero ? 'Sì' : 'No', x.pantaloncino ? 'Sì' : 'No', nome || '', x.roster_id ? (fuoriRosa ? 'No' : 'Sì') : '', x.note || ''];
+    return [etichettaGruppo(x.gruppo), x.numero, x.taglia, x.libero ? 'Sì' : 'No', x.pantaloncino ? 'Sì' : 'No', nome || '', x.roster_id ? (fuoriRosa ? 'No' : 'Sì') : '', x.consegnata_il ? dataOraConsegna(x.consegnata_il).replace(' alle ', ' ') : '', x.note || ''];
   });
   const foglioDivise = XLSX.utils.aoa_to_sheet([intestazione, ...elenco]);
   foglioDivise['!cols'] = intestazione.map((t, i) => ({ wch: Math.max(t.length + 2, ...elenco.map((r) => String(r[i]).length + 2), 8) }));

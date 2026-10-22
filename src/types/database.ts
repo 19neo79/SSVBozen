@@ -210,6 +210,8 @@ export interface Divisa {
   roster_id: string | null;
   giocatore_nome: string | null;
   note: string | null;
+  /** Data e ora di consegna al ragazzo; si azzera quando cambia il ragazzo. */
+  consegnata_il: string | null;
   created_at: string;
   updated_at: string;
 }

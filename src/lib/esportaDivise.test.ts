@@ -8,7 +8,7 @@ function d(over: Partial<Divisa>): Divisa {
   progressivo += 1;
   return {
     id: `d${progressivo}`, gruppo: null, numero: 1, taglia: 'M', libero: false, pantaloncino: false, roster_id: null,
-    giocatore_nome: null, note: null, created_at: '', updated_at: '', ...over,
+    giocatore_nome: null, note: null, consegnata_il: null, created_at: '', updated_at: '', ...over,
   };
 }
 
@@ -24,7 +24,7 @@ describe('filtraPerGruppi', () => {
 describe('testoWhatsAppDivise', () => {
   it('raggruppa per gruppo, segna libero, liberi e note; gruppo vuoto e gruppi non scelti', () => {
     const lista = [
-      d({ gruppo: 'U17', numero: 7, taglia: 'M', roster_id: 'r1', giocatore_nome: 'Mario Rossi', pantaloncino: true }),
+      d({ gruppo: 'U17', numero: 7, taglia: 'M', roster_id: 'r1', giocatore_nome: 'Mario Rossi', pantaloncino: true, consegnata_il: '2026-10-22T10:35:00Z' }),
       d({ gruppo: 'U17', numero: 3, taglia: 'S', libero: true, giocatore_nome: 'Luca Bianchi', note: 'pantaloncino rovinato', pantaloncino: true }),
       d({ gruppo: 'U17', numero: 12, taglia: 'L' }),
       d({ gruppo: 'U17', numero: 9, taglia: 'XL', roster_id: 'r9', giocatore_nome: 'Paolo Neri', pantaloncino: true }),
@@ -37,7 +37,7 @@ describe('testoWhatsAppDivise', () => {
         'Maglie 4 · Pantaloncini 3',
         '',
         '*U17* (4 maglie, 3 pantaloncini)',
-        '7 · M · Mario Rossi',
+        '7 · M · Mario Rossi · consegnata 22/10',
         '9 · XL · Paolo Neri (non più in rosa)',
         '12 · L · libera · senza pantaloncino',
         '3 · S · LIBERO · Luca Bianchi — pantaloncino rovinato',

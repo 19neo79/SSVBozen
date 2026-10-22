@@ -32,6 +32,9 @@ export interface Riepilogo {
   totali: Record<ColonnaRiepilogo, CellaRiepilogo>;
   assegnate: number;
   libere: number;
+  consegnate: number;
+  /** Assegnate a un ragazzo ma non ancora consegnate. */
+  daConsegnare: number;
 }
 
 export const COLONNE_RIEPILOGO: ColonnaRiepilogo[] = [...GRUPPI_DIVISA, 'nessuno', 'totale'];
@@ -45,6 +48,7 @@ export function riepilogo(d: Divisa[]): Riepilogo {
   const righe = TAGLIE.map((taglia) => ({ taglia, celle: celleVuote() }));
   const totali = celleVuote();
   let assegnate = 0;
+  let consegnate = 0;
   for (const x of d) {
     const riga = righe.find((r) => r.taglia === x.taglia);
     for (const col of [x.gruppo ?? 'nessuno', 'totale'] as ColonnaRiepilogo[]) {
@@ -55,8 +59,9 @@ export function riepilogo(d: Divisa[]): Riepilogo {
       }
     }
     if (x.giocatore_nome) assegnate += 1;
+    if (x.giocatore_nome && x.consegnata_il) consegnate += 1;
   }
-  return { righe, totali, assegnate, libere: d.length - assegnate };
+  return { righe, totali, assegnate, libere: d.length - assegnate, consegnate, daConsegnare: assegnate - consegnate };
 }
 
 /** Id delle divise con lo stesso numero nello stesso gruppo e dello stesso tipo (senza gruppo non conta). */
@@ -158,7 +163,31 @@ export function diviseDelGiocatore(p: RosterPlayer, d: Divisa[]): { normale: Div
 }
 
 export function testoDiviseGiocatore(sue: { normale: Divisa | undefined; libero: Divisa | undefined }): string {
-  const una = (x: Divisa) => [`n. ${x.numero}`, x.taglia, etichettaGruppo(x.gruppo), x.pantaloncino ? '' : 'senza pantaloncino'].filter(Boolean).join(' · ');
+  const una = (x: Divisa) =>
+    [`n. ${x.numero}`, x.taglia, etichettaGruppo(x.gruppo), x.pantaloncino ? '' : 'senza pantaloncino', x.consegnata_il ? `consegnata il ${dataConsegna(x.consegnata_il)}` : 'da consegnare']
+      .filter(Boolean)
+      .join(' · ');
   const parti = [sue.normale ? una(sue.normale) : '', sue.libero ? `libero ${una(sue.libero)}` : ''].filter(Boolean);
   return parti.length ? parti.join(' + ') : 'nessuna';
+}
+
+const due = (n: number) => String(n).padStart(2, '0');
+
+/** "22/10/2026" (ora locale del dispositivo). */
+export function dataConsegna(iso: string): string {
+  const d = new Date(iso);
+  return `${due(d.getDate())}/${due(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** "22/10/2026 alle 18:35" (ora locale del dispositivo). */
+export function dataOraConsegna(iso: string): string {
+  const d = new Date(iso);
+  return `${dataConsegna(iso)} alle ${due(d.getHours())}:${due(d.getMinutes())}`;
+}
+
+/** Etichetta per l'elenco: solo per le divise assegnate a un ragazzo. */
+export function etichettaConsegna(x: Divisa): { consegnata: boolean; testo: string } | null {
+  if (!x.giocatore_nome) return null;
+  if (!x.consegnata_il) return { consegnata: false, testo: 'Da consegnare' };
+  return { consegnata: true, testo: `Consegnata ${dataConsegna(x.consegnata_il).slice(0, 5)}` };
 }

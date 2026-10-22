@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUi } from '../contexts/UiContext';
 import { useEliminaDivise, useSalvaDivisa } from '../hooks/useDivise';
-import { GRUPPI_DIVISA, TAGLIE, avvisoTaglia, divisaInConflitto, etichettaGruppo, nomeGiocatore, normalizzaNome } from '../lib/divise';
+import { GRUPPI_DIVISA, TAGLIE, avvisoTaglia, dataOraConsegna, divisaInConflitto, etichettaGruppo, nomeGiocatore, normalizzaNome } from '../lib/divise';
 import type { Divisa, GruppoDivisa, RosterPlayer, TagliaDivisa } from '../types/database';
 import { perCognomeNome } from '../lib/ordine';
 
@@ -30,6 +30,7 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
   const [giocatore, setGiocatore] = useState(() => (divisa ? nomeGiocatore(divisa, rosa).nome ?? '' : ''));
   const [note, setNote] = useState(divisa?.note ?? '');
   const [sposta, setSposta] = useState(false);
+  const [consegna, setConsegna] = useState<string | null>(divisa?.consegnata_il ?? null);
 
   // Il nome scritto corrisponde a un ragazzo della rosa? Allora la divisa resta collegata a lui.
   const ragazzo = useMemo(() => {
@@ -66,7 +67,7 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
     try {
       await salva.mutateAsync({
         id: divisa?.id ?? null,
-        data: { gruppo: gruppo || null, numero: n, taglia, libero, pantaloncino, roster_id: nomeSalvato ? rosterId : null, giocatore_nome: nomeSalvato, note: note.trim() || null },
+        data: { gruppo: gruppo || null, numero: n, taglia, libero, pantaloncino, roster_id: nomeSalvato ? rosterId : null, giocatore_nome: nomeSalvato, note: note.trim() || null, consegnata_il: nomeSalvato ? consegna : null },
         liberaPrima: conflitto && sposta ? conflitto.id : undefined,
       });
       showToast(divisa ? 'Divisa salvata' : 'Divisa aggiunta');
@@ -130,7 +131,11 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
             list="divisa-rosa"
             placeholder="Scegli dalla rosa o scrivi il nome (vuoto = divisa libera)"
             value={giocatore}
-            onChange={(e) => setGiocatore(e.target.value)}
+            onChange={(e) => {
+              setGiocatore(e.target.value);
+              // La consegna era per il ragazzo di prima: cambiandolo si azzera (come fa anche il database).
+              if (consegna && consegna === divisa?.consegnata_il) setConsegna(null);
+            }}
           />
           <datalist id="divisa-rosa">
             {[...rosa].sort(perCognomeNome).map((p) => (
@@ -160,6 +165,34 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
           </div>
         )}
 
+        <div className={`divisa-consegna${consegna && nomeSalvato ? ' fatta' : ''}`}>
+          <label className="chk">
+            <input
+              type="checkbox"
+              checked={!!consegna && !!nomeSalvato}
+              disabled={!nomeSalvato}
+              onChange={(e) => setConsegna(e.target.checked ? new Date().toISOString() : null)}
+            />
+            Consegnata
+          </label>
+          {!nomeSalvato ? (
+            <span className="muted">Assegnala a un ragazzo per segnare la consegna.</span>
+          ) : consegna ? (
+            <>
+              <span>il {dataOraConsegna(consegna)}</span>
+              <input
+                type="datetime-local"
+                aria-label="Data e ora di consegna"
+                value={isoALocale(consegna)}
+                max={isoALocale(new Date().toISOString())}
+                onChange={(e) => { if (e.target.value) setConsegna(new Date(e.target.value).toISOString()); }}
+              />
+            </>
+          ) : (
+            <span className="muted">Spunta quando gliela consegni: registro data e ora.</span>
+          )}
+        </div>
+
         <div className="field" style={{ marginTop: 12 }}>
           <label htmlFor="divisa-note">Note</label>
           <textarea id="divisa-note" rows={2} placeholder="Es. pantaloncino rovinato, da lavare…" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -175,4 +208,11 @@ export function FormDivisa({ divisa, divise, rosa, onChiudi }: { divisa: Divisa 
       </div>
     </div>
   );
+}
+
+/** "2026-10-22T18:35" nell'ora locale, per il campo data e ora. */
+function isoALocale(iso: string): string {
+  const d = new Date(iso);
+  const due = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${due(d.getMonth() + 1)}-${due(d.getDate())}T${due(d.getHours())}:${due(d.getMinutes())}`;
 }

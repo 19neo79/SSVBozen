@@ -5,6 +5,7 @@ import {
   avvisoTaglia,
   creaBlocco,
   diviseDelGiocatore,
+  etichettaConsegna,
   testoDiviseGiocatore,
   divisaInConflitto,
   erroreBlocco,
@@ -31,6 +32,7 @@ function d(over: Partial<Divisa>): Divisa {
     roster_id: null,
     giocatore_nome: null,
     note: null,
+    consegnata_il: null,
     created_at: '',
     updated_at: '',
     ...over,
@@ -58,6 +60,8 @@ describe('riepilogo', () => {
     expect(r.totali.totale.totale).toBe(3);
     expect(r.totali.nessuno.libero).toBe(1);
     expect(r.assegnate).toBe(1);
+    expect(r.consegnate).toBe(0);
+    expect(r.daConsegnare).toBe(1);
     expect(r.libere).toBe(2);
   });
 });
@@ -216,9 +220,25 @@ describe('diviseDelGiocatore', () => {
     expect(diviseDelGiocatore(lorenzo, [d({ numero: 4 })])).toEqual({ normale: undefined, libero: undefined });
   });
   it('testo per la scheda', () => {
-    const normale = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 7, gruppo: 'U14-15', taglia: 'M', pantaloncino: true });
+    const normale = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 7, gruppo: 'U14-15', taglia: 'M', pantaloncino: true, consegnata_il: '2026-10-22T10:35:00Z' });
     const libero = d({ roster_id: 'r1', giocatore_nome: 'Lorenzo Riccadonna', numero: 3, libero: true, taglia: 'S' });
-    expect(testoDiviseGiocatore({ normale, libero })).toBe('n. 7 · M · U14-15 + libero n. 3 · S · Da assegnare · senza pantaloncino');
+    expect(testoDiviseGiocatore({ normale, libero })).toBe('n. 7 · M · U14-15 · consegnata il 22/10/2026 + libero n. 3 · S · Da assegnare · senza pantaloncino · da consegnare');
     expect(testoDiviseGiocatore({ normale: undefined, libero: undefined })).toBe('nessuna');
+  });
+});
+
+describe('consegna', () => {
+  it('conta consegnate e da consegnare tra le divise assegnate', () => {
+    const r = riepilogo([
+      d({ giocatore_nome: 'A B', consegnata_il: '2026-10-22T10:35:00Z' }),
+      d({ giocatore_nome: 'C D' }),
+      d({}),
+    ]);
+    expect([r.consegnate, r.daConsegnare]).toEqual([1, 1]);
+  });
+  it('etichetta per l\'elenco', () => {
+    expect(etichettaConsegna(d({ giocatore_nome: 'A B', consegnata_il: '2026-10-22T10:35:00Z' }))).toEqual({ consegnata: true, testo: 'Consegnata 22/10' });
+    expect(etichettaConsegna(d({ giocatore_nome: 'A B' }))).toEqual({ consegnata: false, testo: 'Da consegnare' });
+    expect(etichettaConsegna(d({}))).toBeNull();
   });
 });

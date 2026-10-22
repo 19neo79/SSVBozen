@@ -9,6 +9,7 @@ import {
   COLONNE_RIEPILOGO,
   GRUPPI_DIVISA,
   TAGLIE,
+  etichettaConsegna,
   etichettaGruppo,
   nomeGiocatore,
   normalizzaNome,
@@ -29,9 +30,10 @@ interface Filtri {
   tipo: 'tutte' | 'normali' | 'libero';
   stato: 'tutte' | 'assegnate' | 'libere';
   pantaloncino: 'tutte' | 'con' | 'senza';
+  consegna: 'tutte' | 'consegnate' | 'daConsegnare';
   testo: string;
 }
-const FILTRI_INIZIALI: Filtri = { gruppo: 'tutti', taglia: 'tutte', tipo: 'tutte', stato: 'tutte', pantaloncino: 'tutte', testo: '' };
+const FILTRI_INIZIALI: Filtri = { gruppo: 'tutti', taglia: 'tutte', tipo: 'tutte', stato: 'tutte', pantaloncino: 'tutte', consegna: 'tutte', testo: '' };
 
 export type Aperto = { tipo: 'divisa'; divisa: Divisa | null } | { tipo: 'blocco' } | { tipo: 'esporta' } | null;
 
@@ -73,6 +75,8 @@ export default function DivisePage() {
         if (filtri.tipo !== 'tutte' && x.libero !== (filtri.tipo === 'libero')) return false;
         if (filtri.stato !== 'tutte' && !!x.giocatore_nome !== (filtri.stato === 'assegnate')) return false;
         if (filtri.pantaloncino !== 'tutte' && x.pantaloncino !== (filtri.pantaloncino === 'con')) return false;
+        if (filtri.consegna === 'consegnate' && !(x.giocatore_nome && x.consegnata_il)) return false;
+        if (filtri.consegna === 'daConsegnare' && !(x.giocatore_nome && !x.consegnata_il)) return false;
         if (!testo) return true;
         if (/^\d+$/.test(testo) && x.numero === Number(testo)) return true;
         const nome = nomeGiocatore(x, rosa).nome;
@@ -105,6 +109,21 @@ export default function DivisePage() {
       await aggiorna.mutateAsync({ ids: selezionate, data: { gruppo } });
       showToast(`${selezionate.length} divise spostate in ${etichettaGruppo(gruppo)}`);
       setSelezione(new Set());
+    } catch (e) {
+      showToast((e as Error).message);
+    }
+  }
+
+  async function segnaConsegnate() {
+    // Solo quelle assegnate a un ragazzo e non ancora consegnate: le altre restano come sono.
+    const ids = divise.filter((x) => selezionate.includes(x.id) && x.giocatore_nome && !x.consegnata_il).map((x) => x.id);
+    if (!ids.length) {
+      showToast('Nessuna delle divise selezionate è assegnata e ancora da consegnare');
+      return;
+    }
+    try {
+      await aggiorna.mutateAsync({ ids, data: { consegnata_il: new Date().toISOString() } });
+      showToast(`${ids.length} ${ids.length === 1 ? 'divisa segnata consegnata' : 'divise segnate consegnate'} adesso`);
     } catch (e) {
       showToast((e as Error).message);
     }
@@ -182,6 +201,8 @@ export default function DivisePage() {
             {r.totali.totale.totale > r.totali.totale.pantaloncini && <> · Senza pantaloncino <strong>{r.totali.totale.totale - r.totali.totale.pantaloncini}</strong></>}
             <br />
             Assegnate <strong>{r.assegnate}</strong> · Libere <strong>{r.libere}</strong>
+            <br />
+            Consegnate <strong>{r.consegnate}</strong> · Da consegnare <strong>{r.daConsegnare}</strong>
           </span>
           <button type="button" className="btn ghost small" onClick={() => setMostraSenza((v) => !v)} disabled={!senzaDivisa.length}>
             Ragazzi della rosa senza divisa: {senzaDivisa.length}
@@ -213,6 +234,11 @@ export default function DivisePage() {
           <option value="assegnate">Solo assegnate</option>
           <option value="libere">Solo libere</option>
         </select>
+        <select aria-label="Consegna" value={filtri.consegna} onChange={(e) => setFiltri({ ...filtri, consegna: e.target.value as Filtri['consegna'] })}>
+          <option value="tutte">Consegnate e da consegnare</option>
+          <option value="daConsegnare">Solo da consegnare</option>
+          <option value="consegnate">Solo consegnate</option>
+        </select>
         <select aria-label="Pantaloncino" value={filtri.pantaloncino} onChange={(e) => setFiltri({ ...filtri, pantaloncino: e.target.value as Filtri['pantaloncino'] })}>
           <option value="tutte">Con e senza pantaloncino</option>
           <option value="con">Solo con pantaloncino</option>
@@ -229,6 +255,7 @@ export default function DivisePage() {
             {GRUPPI_DIVISA.map((g) => <option key={g} value={g}>{g}</option>)}
             <option value="nessuno">Da assegnare</option>
           </select>
+          <button type="button" className="btn ghost small" onClick={segnaConsegnate} disabled={aggiorna.isPending}>Segna consegnate</button>
           <button type="button" className="btn ghost small" onClick={() => segnaPantaloncino(true)} disabled={aggiorna.isPending}>Con pantaloncino</button>
           <button type="button" className="btn ghost small" onClick={() => segnaPantaloncino(false)} disabled={aggiorna.isPending}>Senza pantaloncino</button>
           <button type="button" className="btn ghost small" onClick={togliGiocatore} disabled={aggiorna.isPending}>Togli giocatore</button>
@@ -281,6 +308,10 @@ export default function DivisePage() {
                       <span className={`divisa-gruppo${x.gruppo ? '' : ' nessuno'}`}>{etichettaGruppo(x.gruppo)}</span>
                       {x.libero && <span className="divisa-libero">Libero</span>}
                       {!x.pantaloncino && <span className="divisa-senza-pant">Senza pantaloncino</span>}
+                      {(() => {
+                        const c = etichettaConsegna(x);
+                        return c ? <span className={c.consegnata ? 'divisa-consegnata' : 'divisa-da-consegnare'}>{c.consegnata ? '✓ ' : ''}{c.testo}</span> : null;
+                      })()}
                       {doppi.has(x.id) && <span className="divisa-doppio" title="Numero già usato in questo gruppo">⚠ numero doppio</span>}
                     </div>
                     <div className={`divisa-giocatore${nome ? '' : ' libera'}`}>
