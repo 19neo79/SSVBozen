@@ -778,11 +778,6 @@ export default function RosterPage() {
                   <div className="roster-row-meta">
                     {contattoPrincipale(p) && <span>{contattoPrincipale(p)}</span>}
                     <span className={`roster-cert ${cert.stato}`}>{cert.breve}</span>
-                    {isAdmin && (() => {
-                      // Il numero della divisa normale è già nel quadrato blu: qui solo l'eventuale seconda maglia da libero.
-                      const libero = diviseDelGiocatore(p, divise).libero;
-                      return libero ? <span className="roster-divisa">libero n. {libero.numero} {libero.taglia}</span> : null;
-                    })()}
                   </div>
                 </div>
                 <span
@@ -791,6 +786,11 @@ export default function RosterPage() {
                 >
                   {p.numero ?? '–'}
                 </span>
+                {isAdmin && (() => {
+                  // Seconda maglia, da libero: numero in rosso accanto a quello blu.
+                  const libero = diviseDelGiocatore(p, divise).libero;
+                  return libero ? <span className="roster-numero libero" title={`Maglia da libero n. ${libero.numero}, taglia ${libero.taglia}`}>{libero.numero}</span> : null;
+                })()}
                 <span className="roster-row-chevron">›</span>
               </button>
             );

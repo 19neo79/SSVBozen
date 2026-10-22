@@ -421,6 +421,10 @@ tr:last-child td {
   font-weight: 700;
   line-height: 1;
 }
+.roster-numero.libero {
+  background: var(--rosso);
+  margin-left: -6px;
+}
 .roster-numero.vuoto {
   background: transparent;
   color: #b9b1a3;
@@ -2242,7 +2246,7 @@ table.matrix tbody tr:nth-child(even) th {
 .divise-lib {
   font-size: 12px;
   font-weight: 600;
-  color: #b06a00;
+  color: var(--rosso);
 }
 .divise-riepilogo-piede {
   display: flex;
@@ -2327,8 +2331,7 @@ table.matrix tbody tr:nth-child(even) th {
   font-weight: 700;
 }
 .divisa-numero.libero {
-  background: #e0a800;
-  color: var(--inchiostro);
+  background: var(--rosso);
 }
 .divisa-taglia {
   flex: none;
@@ -2357,7 +2360,7 @@ table.matrix tbody tr:nth-child(even) th {
   color: var(--inchiostro-soft);
 }
 .divisa-libero {
-  color: #b06a00;
+  color: var(--rosso);
 }
 .divisa-doppio {
   color: var(--rosso);
@@ -2432,12 +2435,8 @@ table.matrix tbody tr:nth-child(even) th {
 .divise-senza-pant {
   font-size: 12px;
   font-weight: 600;
-  color: var(--rosso);
+  color: #b06a00;
 }
 .divisa-senza-pant {
-  color: var(--rosso);
-}
-.roster-divisa {
-  font-weight: 600;
-  color: var(--blu);
+  color: #b06a00;
 }
