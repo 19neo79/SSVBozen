@@ -781,7 +781,8 @@ export default function RosterPage() {
                     {isAdmin && (() => {
                       const sue = diviseDelGiocatore(p, divise);
                       if (!sue.normale && !sue.libero) return <span className="roster-divisa nessuna">senza divisa</span>;
-                      return <span className="roster-divisa">divisa {[sue.normale && `n. ${sue.normale.numero} ${sue.normale.taglia}`, sue.libero && `libero n. ${sue.libero.numero} ${sue.libero.taglia}`].filter(Boolean).join(' + ')}</span>;
+                      // Il numero della divisa normale è già nel quadrato blu: qui solo taglia ed eventuale maglia da libero.
+                      return <span className="roster-divisa">{[sue.normale && `taglia ${sue.normale.taglia}`, sue.libero && `libero n. ${sue.libero.numero} ${sue.libero.taglia}`].filter(Boolean).join(' + ')}</span>;
                     })()}
                   </div>
                 </div>
