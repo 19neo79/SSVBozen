@@ -2215,6 +2215,28 @@ table.matrix tbody tr:nth-child(even) th {
 }
 
 /* ---------- Divise ---------- */
+.divise-testa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.divise-testa h2 {
+  margin: 0;
+}
+.divise-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+/* Stessa altezza per tutti: il bordo dei pulsanti "ghost" non deve renderli diversi da quello pieno. */
+.divise-azioni .btn {
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--blu);
+}
 .divise-riepilogo {
   margin-top: 14px;
 }

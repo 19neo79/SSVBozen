@@ -160,11 +160,11 @@ export default function DivisePage() {
 
   return (
     <section className="divise">
-      <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ margin: 0 }}>Divise</h2>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn ghost small" onClick={() => setAperto({ tipo: 'esporta' })}>Esporta</button>
-          <button className="btn ghost small" onClick={() => setAperto({ tipo: 'blocco' })}>+ A blocchi</button>
+      <div className="divise-testa">
+        <h2>Divise</h2>
+        <div className="divise-azioni">
+          <button className="btn ghost" onClick={() => setAperto({ tipo: 'esporta' })}>Esporta</button>
+          <button className="btn ghost" onClick={() => setAperto({ tipo: 'blocco' })}>+ A blocchi</button>
           <button className="btn" onClick={() => setAperto({ tipo: 'divisa', divisa: null })}>+ Divisa</button>
         </div>
       </div>
